@@ -2,6 +2,7 @@ import processing.serial.*;
 import cc.arduino.*;
 
 final boolean USE_OWN_CURVE = true;
+final boolean ARDUINO_CONNECTED = false;
 
 final int NUM_MOTORS = 3;
 
@@ -19,15 +20,18 @@ float[] drawAngle = new float[NUM_MOTORS];
 void setup() {
     size(180*SFACTOR, 100*SFACTOR);
     background(102);
-    
+
     println(Arduino.list());
-    arduino = new Arduino(this, "/dev/ttyUSB0", 57600);
+
+    if(ARDUINO_CONNECTED)
+	arduino = new Arduino(this, "/dev/ttyUSB0", 57600);
 
     //    motor[0] = new Motor(arduino, 12);
     //motor[1] = new Motor(arduino, 7);
 
     for(int i = 0; i < motor.length; i++){
-	motor[i] = new Motor(arduino, 10-NUM_MOTORS+i);
+	if(ARDUINO_CONNECTED)
+	    motor[i] = new Motor(arduino, 10-NUM_MOTORS+i);
 	drawAngle[i] = 180;
     }
 
@@ -79,8 +83,9 @@ void draw() {
     ellipse(0,0,15,15);
     rect(0, -2, 35, 4);
 
-    for(int i = 0; i < motor.length; i++)
-	motor[i].move(arduino,int(drawAngle[i])); //CHECK RANGE MAY NOT BE FULL
+    if(ARDUINO_CONNECTED)
+	for(int i = 0; i < motor.length; i++)
+	    motor[i].move(arduino,int(drawAngle[i])); //CHECK RANGE MAY NOT BE FULL
     //	motor[i].move(arduino,int(drawAngle[i]*57)); //CHECK RANGE MAY NOT BE FULL
 }
  
