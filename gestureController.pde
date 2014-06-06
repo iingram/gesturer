@@ -46,6 +46,7 @@ void setup() {
 }
 
 void draw() {
+    thread("readPipe");
     background(100);
     
     if (mousePressed == false) {
@@ -109,4 +110,11 @@ void mouseReleased(){
 	going[i] = false;
 	gestPlayer[i].init("data.csv");
     }
+}
+
+
+void readPipe() {
+    String[] s = loadStrings("sharingPlace.tmp");
+    if(int(s[0]) == 1)
+       going[0] = true;
 }
