@@ -2,7 +2,7 @@ import processing.serial.*;
 import cc.arduino.*;
 
 final boolean USE_OWN_CURVE = true;
-final boolean ARDUINO_CONNECTED = false;
+final boolean ARDUINO_CONNECTED = true;
 
 final int NUM_MOTORS = 3;
 
@@ -84,9 +84,16 @@ void draw() {
     ellipse(0,0,15,15);
     rect(0, -2, 35, 4);
 
-    if(ARDUINO_CONNECTED)
-	for(int i = 0; i < motor.length; i++)
-	    motor[i].move(arduino,int(drawAngle[i])); //CHECK RANGE MAY NOT BE FULL
+    // if(ARDUINO_CONNECTED)
+    // 	for(int i = 0; i < motor.length; i++)
+    // 	    motor[i].move(arduino,int(drawAngle[i])); //CHECK RANGE MAY NOT BE FULL    
+    //THIS IS SET FOR PARTICULAR GEOMETRY OF THE TWO LEG SET TOWER
+    if(ARDUINO_CONNECTED){
+	motor[0].move(arduino,int(drawAngle[0])); //CHECK RANGE MAY NOT BE FULL    
+	motor[1].move(arduino,180 - int(drawAngle[1])); //CHECK RANGE MAY NOT BE FULL    
+    }
+
+    
     //	motor[i].move(arduino,int(drawAngle[i]*57)); //CHECK RANGE MAY NOT BE FULL
 }
  
@@ -115,6 +122,12 @@ void mouseReleased(){
 
 void readPipe() {
     String[] s = loadStrings("sharingPlace.tmp");
-    if(int(s[0]) == 1)
-       going[0] = true;
+    int level = int(s[0]);
+    if(level == 1){
+	going[0] = true;
+    }
+    else if (level == 2){
+	going[0] = true;
+	going[1] = true;
+    }
 }
