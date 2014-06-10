@@ -7,6 +7,8 @@ my $last2 = 42;
 my $divisor = 46001413368/1000;
 my $fixed = 0;
 
+print "time,value\n";
+
 while(<STDIN>){
 #    print "$1,$2\n" if /^\s{7}(\d*),([-+]?[0-9]*\.[0-9]+),/;
     
