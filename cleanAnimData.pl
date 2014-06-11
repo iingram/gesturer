@@ -19,6 +19,6 @@ while(<STDIN>){
  	print "$fixed,$last2\n" if $last1 < $1;
  	
  	$last1 = $1;
- 	$last2 = $2;
+ 	$last2 = $2+90;  #this adjusts for an offset that comes out of blender (at least on the rotation I am using)
     }
 }
