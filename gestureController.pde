@@ -1,12 +1,14 @@
 import processing.serial.*;
 import cc.arduino.*;
 
-final boolean USE_OWN_CURVE = true;
+final boolean USE_OWN_CURVE = false;
 final boolean ARDUINO_CONNECTED = true;
 
 final int NUM_MOTORS = 3;
 
 final int SFACTOR = 2;
+final float MOVE_GAIN_0 = 1.2;
+final float MOVE_GAIN_1 = 1.8;
 
 boolean going[] = new boolean[NUM_MOTORS];
 GesturePlayer[] gestPlayer = new GesturePlayer[NUM_MOTORS];
@@ -32,7 +34,7 @@ void setup() {
     for(int i = 0; i < motor.length; i++){
 	if(ARDUINO_CONNECTED)
 	    motor[i] = new Motor(arduino, 10-NUM_MOTORS+i);
-	drawAngle[i] = 180;
+	drawAngle[i] = 80/MOVE_GAIN_0;
     }
 
     for(int i = 0; i < gestPlayer.length; i++){
@@ -89,8 +91,8 @@ void draw() {
     // 	    motor[i].move(arduino,int(drawAngle[i])); //CHECK RANGE MAY NOT BE FULL    
     //THIS IS SET FOR PARTICULAR GEOMETRY OF THE TWO LEG SET TOWER
     if(ARDUINO_CONNECTED){
-	motor[0].move(arduino,int(drawAngle[0])); //CHECK RANGE MAY NOT BE FULL    
-	motor[1].move(arduino,180 - int(drawAngle[1])); //CHECK RANGE MAY NOT BE FULL    
+	motor[0].move(arduino,int(MOVE_GAIN_0 * drawAngle[0])); //CHECK RANGE MAY NOT BE FULL    
+	motor[1].move(arduino,180 - int(MOVE_GAIN_1 * drawAngle[1])); //CHECK RANGE MAY NOT BE FULL    
     }
 
     
