@@ -10,6 +10,7 @@ my $queryChannel = "Transform";   #not sure what other possibilities are - only 
 my $queryAnimType = $ARGV[1];     #(T)ranslate, (R)otate, (S)cale
 my $queryAxis = $ARGV[2];         #X, Y, Z
 my $offset = $ARGV[3];            #offset added to correct values (use 90 in this case, 0 if no offset needed)
+my $multiplier = $ARGV[4];         #multiplier to account for "flipped" values -> either 1 or -1 (usually)
 
 my $modelCheck = 0;
 my $channelCheck = 0;
@@ -54,7 +55,7 @@ while(<STDIN>){
   if(/^\s{7}(\d*),([-+]?[0-9]*\.[0-9]+),/){
 	$fixed = $1/$divisor;
 	$fixed = int($fixed);
-	my $corrected = $2 + $offset;
+	my $corrected = ($2*$multiplier) + $offset;
 	if ($channelCheck && $modelCheck && $animTypeCheck && $axisCheck) {
 	  print "$fixed,$corrected\n";
 	}
