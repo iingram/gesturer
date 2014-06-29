@@ -55,7 +55,7 @@ while(<STDIN>){
   if(/^\s{7}(\d*),([-+]?[0-9]*\.[0-9]+),/){
 	$fixed = $1/$divisor;
 	$fixed = int($fixed);
-	my $corrected = ($2*$multiplier) + $offset;
+	my $corrected = ($2+$offset) * $multiplier;
 	if ($channelCheck && $modelCheck && $animTypeCheck && $axisCheck) {
 	  print "$fixed,$corrected\n";
 	}
