@@ -4,6 +4,7 @@ use warnings;
 
 my $divisor = 46001413368/1000;
 my $fixed = 0;
+my $zeroThreshhold = 0.00001;
 
 my $queryModel = $ARGV[0];        #in this case: Cube, Camera, or Lamp
 my $queryChannel = "Transform";   #not sure what other possibilities are - only Transform appears in .fbx
@@ -56,6 +57,11 @@ while(<STDIN>){
 	$fixed = $1/$divisor;
 	$fixed = int($fixed);
 	my $corrected = ($2+$offset) * $multiplier;
+	#if corrected value is close enough to 0, round it to 0
+	if (abs($corrected) < $zeroThreshhold) {
+	  $corrected = 0;
+	}
+
 	if ($channelCheck && $modelCheck && $animTypeCheck && $axisCheck) {
 	  print "$fixed,$corrected\n";
 	}
