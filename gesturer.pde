@@ -7,7 +7,9 @@ final boolean ARDUINO_CONNECTED = true;
 final int NUM_MOTORS = 3;
 
 final int SFACTOR = 2;
-final float MOVE_GAIN_0 = 1.2;
+//final float MOVE_GAIN_0 = 1.2;
+//final float MOVE_GAIN_1 = 1.8;
+final float MOVE_GAIN_0 = 1.5;
 final float MOVE_GAIN_1 = 1.8;
 
 boolean going[] = new boolean[NUM_MOTORS];
@@ -106,7 +108,7 @@ void keyReleased(){
 	going[1] = true;
     if(key == '3')
 	going[2] = true;
-    if(key == 'q')
+    if(key == 'w')
 	exit();
 }
 
