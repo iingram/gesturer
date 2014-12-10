@@ -11,8 +11,10 @@ Motor   motor;
 float drawAngle = 0;
 int pMX = -1;
 
+final int SFACTOR = 4;
+
 void setup() {
-    size(180, 50);
+    size(180*SFACTOR, 100*SFACTOR);
     background(102);
     
     println(Arduino.list());
@@ -48,6 +50,7 @@ void draw() {
     else{
 	if(pMX != mouseX){
 	    drawAngle = constrain(mouseX,0,180);
+	    drawAngle = constrain(mouseX/SFACTOR,0,180);
 	    gestRecorder.addPosition(drawAngle);
 	}
 	pMX = mouseX;
@@ -58,7 +61,7 @@ void draw() {
 	    strokeWeight(1);
 	else
 	    strokeWeight(.1);
-	line(i,0,i,height);
+	line(i*SFACTOR,0,i*SFACTOR,height);
     }
     stroke(255,0,0);
     strokeWeight(2);
