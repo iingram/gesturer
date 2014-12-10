@@ -63,6 +63,11 @@ void setup() {
 	    gestPlayer[i] = new GesturePlayer("curves/timeCurve.csv");
 	going[i] = false;
     }
+
+    //init to start position
+    drawAngle[0] = gestPlayer[0].getPosition();
+    for(int i = 0; i < gestPlayer.length; i++)
+	gestPlayer[i].resetTime();
 }
 
 void draw() {
