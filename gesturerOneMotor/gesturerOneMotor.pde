@@ -19,9 +19,20 @@ void setup() {
     arduino = new Arduino(this, "/dev/ttyUSB0", 57600);
     motor = new Motor(arduino, 4);
     drawAngle = 90;
+    String fileName = "data.csv";
     
-    gestPlayer = new GesturePlayer("data.csv");
-    gestRecorder = new GestureRecorder("data.csv");
+    gestRecorder = new GestureRecorder(fileName);
+    File f = new File(fileName);
+    if (f.exists()){
+	println("\nNOTE: THERE APPEARS TO BE AN EXISTING DATA FILE. OPENING IT FOR PLAYBACK. \n");//
+	gestPlayer = new GesturePlayer(fileName);
+    }
+    else{
+	println("\nWARNING: DATA FILE DID NOT EXIST. CREATING ONE. \n");//
+	gestRecorder.clear();
+	gestRecorder.addPosition(0);
+	gestPlayer = new GesturePlayer(fileName);
+    }
 }
 
 void draw() {
@@ -32,7 +43,7 @@ void draw() {
 	    going = !(gestPlayer.update(millis()));
 	    drawAngle = gestPlayer.getPosition();
 	}
-	pMX = -1;
+	pMX = -1; 
     }
     else{
 	if(pMX != mouseX){
