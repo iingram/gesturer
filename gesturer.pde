@@ -1,6 +1,8 @@
 import processing.serial.*;
 import cc.arduino.*;
 
+final String fileName = "data.csv";
+
 final boolean USE_OWN_CURVE = false;
 final boolean ARDUINO_CONNECTED = true;
 
@@ -40,14 +42,32 @@ void setup() {
 	drawAngle[i] = 80/MOVE_GAIN_0;
     }
 
+    gestRecorder = new GestureRecorder(fileName);
+
+    if(USE_OWN_CURVE){
+	File f = new File(fileName);
+	if (f.exists()){
+	    println("\nNOTE: THERE APPEARS TO BE AN EXISTING DATA FILE. WILL USE IT. \n");//
+	}
+	else{
+	    println("\nWARNING: DATA FILE DID NOT EXIST. CREATING ONE. \n");//
+	    gestRecorder.clear();
+	    gestRecorder.addPosition(0);
+	}
+    }
+
     for(int i = 0; i < gestPlayer.length; i++){
 	if(USE_OWN_CURVE)
-	    gestPlayer[i] = new GesturePlayer("data.csv");
+	    gestPlayer[i] = new GesturePlayer(fileName);
 	else
 	    gestPlayer[i] = new GesturePlayer("curves/timeCurve.csv");
 	going[i] = false;
     }
-    gestRecorder = new GestureRecorder("data.csv");
+
+
+
+
+
 }
 
 void draw() {
@@ -122,7 +142,7 @@ void mousePressed(){
 void mouseReleased(){
     for(int i = 0; i < gestPlayer.length; i++){
 	going[i] = false;
-	gestPlayer[i].init("data.csv");
+	gestPlayer[i].init(fileName);
     }
 }
 
