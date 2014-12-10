@@ -1,27 +1,29 @@
 import processing.serial.*;
 import cc.arduino.*;
 
+//these three lines you might want to edit
+String fileName = "data.csv";
+int motorPin = 4;
+int scaleFactor = 4;
+
+// rest of code you probably want to leave the same
 boolean going;
 GesturePlayer gestPlayer;
 GestureRecorder gestRecorder;
-
 Arduino arduino;
-Motor   motor;
-
-float drawAngle = 0;
-int pMX = -1;
-
-final int SFACTOR = 4;
+float drawAngle;
+int pMX;
 
 void setup() {
-    size(180*SFACTOR, 100*SFACTOR);
+    size(180*scaleFactor, 100*scaleFactor);
     background(102);
     
     println(Arduino.list());
     arduino = new Arduino(this, "/dev/ttyUSB0", 57600);
-    motor = new Motor(arduino, 4);
+    arduino.pinMode(motorPin, Arduino.SERVO);
+
     drawAngle = 90;
-    String fileName = "data.csv";
+    pMX = -1;
     
     gestRecorder = new GestureRecorder(fileName);
     File f = new File(fileName);
@@ -49,14 +51,14 @@ void draw() {
     }
     else{
 	if(pMX != mouseX){
-	    drawAngle = constrain(mouseX/SFACTOR,0,180);
+	    drawAngle = constrain(mouseX/scaleFactor,0,180);
 	    gestRecorder.addPosition(drawAngle);
 	}
 	pMX = mouseX;
     }
 
     //move the motor
-    motor.move(arduino,int(drawAngle));
+    arduino.servoWrite(motorPin, constrain(int(drawAngle), 0, 180));
 
     // draw UI
     // draw graduations: major are thick, minor thin
@@ -66,7 +68,7 @@ void draw() {
 	    strokeWeight(1);
 	else
 	    strokeWeight(.1);
-	line(i*SFACTOR,0,i*SFACTOR,height);
+	line(i*scaleFactor,0,i*scaleFactor,height);
     }
     //draw a vertical line at mouse position
     stroke(255,0,0);
