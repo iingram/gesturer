@@ -100,6 +100,6 @@ void mousePressed(){
 
 void mouseReleased(){
     going = false;
-    gestPlayer.init("data.csv");
+    gestPlayer.init(fileName);
 }
 
