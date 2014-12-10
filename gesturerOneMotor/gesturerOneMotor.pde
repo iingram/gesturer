@@ -9,6 +9,7 @@ Arduino arduino;
 Motor   motor;
 
 float drawAngle = 0;
+int pMX = -1;
 
 void setup() {
     size(180, 50);
@@ -31,12 +32,14 @@ void draw() {
 	    going = !(gestPlayer.update(millis()));
 	    drawAngle = gestPlayer.getPosition();
 	}
+	pMX = -1;
     }
     else{
-	if(pmouseX != mouseX){
+	if(pMX != mouseX){
 	    drawAngle = constrain(mouseX,0,180);
 	    gestRecorder.addPosition(drawAngle);
 	}
+	pMX = mouseX;
     }
     for(int i = 0; i < 180; i+=5){
 	stroke(0);
