@@ -63,11 +63,6 @@ void setup() {
 	    gestPlayer[i] = new GesturePlayer("curves/timeCurve.csv");
 	going[i] = false;
     }
-
-
-
-
-
 }
 
 void draw() {
