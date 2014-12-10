@@ -6,8 +6,8 @@ String fileName = "data.csv";
 int motorPin = 4;
 int scaleFactor = 4;
 
-// rest of code you probably want to leave the same
-boolean going;
+// the rest of the code you probably want to leave as is
+boolean going, looping;
 GesturePlayer gestPlayer;
 GestureRecorder gestRecorder;
 Arduino arduino;
@@ -47,6 +47,13 @@ void draw() {
 	    drawAngle = gestPlayer.getPosition();
 	    going = !(gestPlayer.update(millis()));
 	}
+	else if(looping){
+	    drawAngle = gestPlayer.getPosition();
+	    gestPlayer.resetTime();
+	    arduino.servoWrite(motorPin, constrain(int(drawAngle), 0, 180));
+	    delay(1000);
+	    going = true;
+	}
 	pMX = -1; 
     }
     else{
@@ -75,17 +82,27 @@ void draw() {
     strokeWeight(2);
     line(mouseX,0,mouseX,height);
 
+    //draw button control key
+    textSize(12);
+    text("Click and mouse to gesture", width - 175, height - 60); 
+    text("Press 'p' to play back", width - 175, height - 45);
+    text("Press 'r' to rewind", width - 175, height - 30); 
+    text("Press 'o' to loop", width - 175, height - 15); 
+
     //draw dial readout
     translate(width/2, height/2);
     rotate(radians(drawAngle + 180));
     noStroke();
     ellipse(0,0,15,15);
     rect(0, -2, 35, 4);
+
 }
  
 void keyReleased(){
-    if(key == 'g')
+    if(key == 'p')
 	going = true;
+    if(key == 'o')
+	looping = !looping;
     if(key == 'r'){
 	drawAngle = gestPlayer.getPosition();
 	gestPlayer.resetTime();
