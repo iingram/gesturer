@@ -9,7 +9,7 @@ class GesturePlayer{
     
     TableRow theRow;
 
-    boolean backAtZero;
+    boolean backAtZero = true;
     
     GesturePlayer(String fileName){
 	init(fileName);
@@ -18,12 +18,13 @@ class GesturePlayer{
     void init(String fileName){
 	rowNum = 0;
 	backAtZero = false;
+
 	table = loadTable(fileName,"header");
 	numRows = table.getRowCount();
 	theRow = table.getRow(rowNum);
 	cTime = theRow.getInt("time");
 	sTime = millis();
-	position = theRow.getFloat("value");     
+	position = theRow.getFloat("value");
     }
     
     boolean update(float iTime){
@@ -48,6 +49,10 @@ class GesturePlayer{
     
     int getTime(){
 	return cTime;
+    }
+    
+    void resetTime(){
+	backAtZero = true;
     }
     
     float getPosition(){
