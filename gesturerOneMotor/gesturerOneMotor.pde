@@ -84,8 +84,10 @@ void draw() {
 void keyReleased(){
     if(key == 'g')
 	going = true;
-    if(key == 'r')
+    if(key == 'r'){
 	drawAngle = gestPlayer.getPosition();
+	gestPlayer.resetTime();
+    }
     if(key == 'q')
 	exit();
 }
