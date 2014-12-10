@@ -20,6 +20,7 @@ Arduino arduino;
 Motor[] motor = new Motor[NUM_MOTORS];
 
 float[] drawAngle = new float[NUM_MOTORS];
+int pMX = -1;
 
 void setup() {
     size(180*SFACTOR, 100*SFACTOR);
@@ -60,14 +61,16 @@ void draw() {
 		drawAngle[i] = gestPlayer[i].getPosition();
 	    }
 	}
+	pMX = -1;
     }
     else{
-	if(pmouseX != mouseX){
+	if(pMX != mouseX){
 	    for(int i = 0; i < gestPlayer.length; i++)
 		drawAngle[i] = constrain(mouseX/SFACTOR,0,180);
 	    //		drawAngle[i] = mouseX*.01;
 	    gestRecorder.addPosition(drawAngle[0]);
 	}
+	pMX = mouseX;
     }
     for(int i = 0; i < 180; i+=5){
 	stroke(0);
