@@ -42,8 +42,8 @@ void draw() {
     
     if (mousePressed == false) {
 	if(going){
-	    going = !(gestPlayer.update(millis()));
 	    drawAngle = gestPlayer.getPosition();
+	    going = !(gestPlayer.update(millis()));
 	}
 	pMX = -1; 
     }
