@@ -40,8 +40,6 @@ void setup() {
 }
 
 void draw() {
-    background(100);
-    
     if (mousePressed == false) {
 	if(going){
 	    drawAngle = gestPlayer.getPosition();
@@ -67,7 +65,12 @@ void draw() {
     //move the motor
     arduino.servoWrite(motorPin, constrain(int(drawAngle), 0, 180));
 
-    // draw UI
+    drawUI();
+}
+
+void drawUI(){
+    pushMatrix();
+    background(100);
     // draw graduations: major are thick, minor thin
     for(int i = 0; i < 180; i+=5){
 	stroke(0);
@@ -77,27 +80,29 @@ void draw() {
 	    strokeWeight(.1);
 	line(i*scaleFactor,0,i*scaleFactor,height);
     }
+    
     //draw a vertical line at mouse position
     stroke(255,0,0);
     strokeWeight(2);
     line(mouseX,0,mouseX,height);
-
+    
     //draw button control key
     textSize(12);
-    text("Click and mouse to gesture", width - 175, height - 60); 
-    text("Press 'p' to play back", width - 175, height - 45);
-    text("Press 'r' to rewind", width - 175, height - 30); 
-    text("Press 'o' to loop", width - 175, height - 15); 
-
+    text("Click and mouse to gesture", width - 175, height - 75); 
+    text("Press 'p' to play back", width - 175, height - 60);
+    text("Press 'r' to rewind", width - 175, height - 45); 
+    text("Press 'o' to loop", width - 175, height - 30); 
+    text("Press 'q' to quit", width - 175, height - 15); 
+    
     //draw dial readout
     translate(width/2, height/2);
     rotate(radians(drawAngle + 180));
     noStroke();
     ellipse(0,0,15,15);
     rect(0, -2, 35, 4);
-
+    popMatrix();
 }
- 
+
 void keyReleased(){
     if(key == 'p')
 	going = true;
