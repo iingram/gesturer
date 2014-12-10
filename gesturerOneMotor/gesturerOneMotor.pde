@@ -49,12 +49,17 @@ void draw() {
     }
     else{
 	if(pMX != mouseX){
-	    drawAngle = constrain(mouseX,0,180);
 	    drawAngle = constrain(mouseX/SFACTOR,0,180);
 	    gestRecorder.addPosition(drawAngle);
 	}
 	pMX = mouseX;
     }
+
+    //move the motor
+    motor.move(arduino,int(drawAngle));
+
+    // draw UI
+    // draw graduations: major are thick, minor thin
     for(int i = 0; i < 180; i+=5){
 	stroke(0);
 	if(i%(15) == 0)
@@ -63,17 +68,17 @@ void draw() {
 	    strokeWeight(.1);
 	line(i*SFACTOR,0,i*SFACTOR,height);
     }
+    //draw a vertical line at mouse position
     stroke(255,0,0);
     strokeWeight(2);
     line(mouseX,0,mouseX,height);
 
+    //draw dial readout
     translate(width/2, height/2);
     rotate(radians(drawAngle + 180));
     noStroke();
     ellipse(0,0,15,15);
     rect(0, -2, 35, 4);
-    
-    motor.move(arduino,int(drawAngle)); //CHECK RANGE MAY NOT BE FULL    
 }
  
 void keyReleased(){
