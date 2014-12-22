@@ -4,3 +4,5 @@ output/
 curves
 gesturerOneMotor/GesturePlayer.pde
 gesturerOneMotor/GestureRecorder.pde
+gesturerTwoMotors/GesturePlayer.pde
+gesturerTwoMotors/GestureRecorder.pde
