@@ -23,7 +23,7 @@ int basePitch;
 int baseYaw;
 
 //int[][] bases = new int[3][2];
-int[][] bases = {{76,99},{39,167},{39,99}};
+int[][] bases = {{116,93},{32,86},{67,58}};
 int baseIndex = 0;
 
 void setup() {
@@ -33,14 +33,14 @@ void setup() {
 
     if (ARDUINO_CONNECTED) {
 	println(Arduino.list());
-	arduino = new Arduino(this, "/dev/ttyUSB0", 57600);
+	arduino = new Arduino(this, "/dev/ttyUSB1", 57600);
 	arduino.pinMode(motorPinPitch, Arduino.SERVO);
 	arduino.pinMode(motorPinNeck, Arduino.SERVO);
 	arduino.pinMode(motorPinYaw, Arduino.SERVO);
     }
 
-    basePitch = bases[0][0];
-    baseYaw = bases[0][1];
+    basePitch = bases[0][1];
+    baseYaw = bases[0][0];
 
     drawAnglePitch = 90;
     drawAngleNeck = 90;
@@ -162,8 +162,8 @@ void keyReleased() {
 	baseIndex++;
 	if(baseIndex > bases.length - 1)
 	    baseIndex = 0;
-	basePitch = bases[baseIndex][0];
-	baseYaw = bases[baseIndex][1];
+	basePitch = bases[baseIndex][1];
+	baseYaw = bases[baseIndex][0];
     }
     if (key == 'r') {
 	drawAnglePitch = gestPlayerPitch.getPosition();
