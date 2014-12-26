@@ -1,5 +1,6 @@
 import processing.serial.*;
 import cc.arduino.*;
+import de.looksgood.ani.*;
 
 final boolean ARDUINO_CONNECTED = true;
 final int OFFSET = -60;
@@ -66,6 +67,11 @@ void setup() {
 
     looping = false;
     going = false;
+
+    gestPlayerPitch.resetTime();
+    gestPlayerNeck.resetTime();
+
+    Ani.init(this);
 }
 
 void draw() {
@@ -88,6 +94,10 @@ void draw() {
 	delay(1000);
 	going = true;
     } 
+    else{
+	gestPlayerPitch.resetTime();
+	gestPlayerNeck.resetTime();
+    }
 
     if(mouseX != pmouseX || mouseY != pmouseY){
 	baseYaw = mouseX;
@@ -162,8 +172,10 @@ void keyReleased() {
 	baseIndex++;
 	if(baseIndex > bases.length - 1)
 	    baseIndex = 0;
-	basePitch = bases[baseIndex][1];
-	baseYaw = bases[baseIndex][0];
+	Ani.to(this, 2.5, "basePitch", bases[baseIndex][1], Ani.QUINT_IN_OUT);
+	Ani.to(this, 2.5, "baseYaw", bases[baseIndex][0], Ani.QUINT_IN_OUT);
+	// basePitch = bases[baseIndex][1];
+	// baseYaw = bases[baseIndex][0];
     }
     if (key == 'r') {
 	drawAnglePitch = gestPlayerPitch.getPosition();
@@ -174,4 +186,3 @@ void keyReleased() {
     if (key == 'q')
 	exit();
 }
-
