@@ -19,9 +19,12 @@ GesturePlayer gestPlayerNeck;
 
 Arduino arduino;
 float drawAnglePitch, drawAngleNeck, drawAngleYaw;
-int basePitch = 58;
-int baseYaw = 93;
+int basePitch;
+int baseYaw;
 
+//int[][] bases = new int[3][2];
+int[][] bases = {{76,99},{39,167},{39,99}};
+int baseIndex = 0;
 
 void setup() {
     frameRate(240);
@@ -36,9 +39,13 @@ void setup() {
 	arduino.pinMode(motorPinYaw, Arduino.SERVO);
     }
 
-    drawAnglePitch = basePitch;
+    basePitch = bases[0][0];
+    baseYaw = bases[0][1];
+
+    drawAnglePitch = 90;
     drawAngleNeck = 90;
     drawAngleYaw = 90;  
+
     // Fil3 f = new File(fileNamePitch);
     // if (f.exists()){
     gestPlayerPitch = new GesturePlayer(fileNamePitch);
@@ -65,6 +72,7 @@ void draw() {
 
     drawAnglePitch = gestPlayerPitch.getPosition() + basePitch + OFFSET;
     drawAngleNeck = gestPlayerNeck.getPosition();
+    drawAngleYaw = baseYaw;
 
     if (going) {
 	going = !(gestPlayerPitch.update(millis()));
@@ -80,8 +88,6 @@ void draw() {
 	delay(1000);
 	going = true;
     } 
-
-    drawAngleYaw = baseYaw;
 
     if(mouseX != pmouseX || mouseY != pmouseY){
 	baseYaw = mouseX;
@@ -115,9 +121,14 @@ void drawUI() {
     stroke(255, 0, 0);
     strokeWeight(2);
     line(mouseX, 0, mouseX, height);
+    
+    String ms;
+    ms = String.format("MouseX is %d" + " Mouse Y is %d, ", mouseX, mouseY);
 
     //draw button control key
     textSize(12);
+    text(ms, width - 175, height - 110);
+    text("Press 'i' for next base", width - 175, height - 95);
     text("Click and mouse to gesture", width - 175, height - 75); 
     text("Press 'p' to play back", width - 175, height - 60);
     text("Press 'r' to rewind", width - 175, height - 45); 
@@ -147,6 +158,13 @@ void keyReleased() {
 	going = true;
     if (key == 'o')
 	looping = !looping;
+    if (key == 'i'){
+	baseIndex++;
+	if(baseIndex > bases.length - 1)
+	    baseIndex = 0;
+	basePitch = bases[baseIndex][0];
+	baseYaw = bases[baseIndex][1];
+    }
     if (key == 'r') {
 	drawAnglePitch = gestPlayerPitch.getPosition();
 	drawAngleNeck = gestPlayerNeck.getPosition();
