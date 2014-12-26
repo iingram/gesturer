@@ -4,20 +4,24 @@ import cc.arduino.*;
 final boolean ARDUINO_CONNECTED = true;
 final int OFFSET = -60;
 
-String fileName1 = "../ttt.csv";
-int motorPin1 = 7;
-String fileName2 = "../ttt2.csv";
-int motorPin2 = 6;
-int motorPin3 = 4;
+String fileNamePitch = "../ttt.csv";
+String fileNameNeck = "../ttt2.csv";
+
+int motorPinPitch = 7;
+int motorPinNeck = 6;
+int motorPinYaw = 4;
 
 int scaleFactor = 4;
 
 boolean going, looping;
-GesturePlayer gestPlayer1;
-GesturePlayer gestPlayer2;
+GesturePlayer gestPlayerPitch;
+GesturePlayer gestPlayerNeck;
 
 Arduino arduino;
-float drawAngle1, drawAngle2, drawAngle3;
+float drawAnglePitch, drawAngleNeck, drawAngleYaw;
+int basePitch = 58;
+int baseYaw = 93;
+
 
 void setup() {
     frameRate(240);
@@ -26,27 +30,27 @@ void setup() {
 
     if (ARDUINO_CONNECTED) {
 	println(Arduino.list());
-	arduino = new Arduino(this, "COM3", 57600);
-	arduino.pinMode(motorPin1, Arduino.SERVO);
-	arduino.pinMode(motorPin2, Arduino.SERVO);
-	arduino.pinMode(motorPin3, Arduino.SERVO);
+	arduino = new Arduino(this, "/dev/ttyUSB0", 57600);
+	arduino.pinMode(motorPinPitch, Arduino.SERVO);
+	arduino.pinMode(motorPinNeck, Arduino.SERVO);
+	arduino.pinMode(motorPinYaw, Arduino.SERVO);
     }
 
-    drawAngle1 = 90;
-    drawAngle2 = 90;
-    drawAngle3 = 90;  
-    // Fil3 f = new File(fileName1);
+    drawAnglePitch = basePitch;
+    drawAngleNeck = 90;
+    drawAngleYaw = 90;  
+    // Fil3 f = new File(fileNamePitch);
     // if (f.exists()){
-    gestPlayer1 = new GesturePlayer(fileName1);
+    gestPlayerPitch = new GesturePlayer(fileNamePitch);
     // }
     // else{
     //	println("\nWARNING: DATA FILE DID NOT EXIST. EXITING. \n");//
     //	exit();
     //    }
 
-    //  File f2 = new File(fileName2);
+    //  File f2 = new File(fileNameNeck);
     //  if (f2.exists()){
-    gestPlayer2 = new GesturePlayer(fileName2);
+    gestPlayerNeck = new GesturePlayer(fileNameNeck);
     //   }
     //  else{
     // 	println("\nWARNING: DATA FILE DID NOT EXIST. EXITING. \n");//
@@ -58,33 +62,36 @@ void setup() {
 }
 
 void draw() {
+
+    drawAnglePitch = gestPlayerPitch.getPosition() + basePitch + OFFSET;
+    drawAngleNeck = gestPlayerNeck.getPosition();
+
     if (going) {
-	drawAngle1 = gestPlayer1.getPosition() + mouseY + OFFSET;
-	drawAngle2 = gestPlayer2.getPosition();
-	going = !(gestPlayer1.update(millis()));
-	gestPlayer2.update(millis());
+	going = !(gestPlayerPitch.update(millis()));
+	gestPlayerNeck.update(millis());
     } 
     else if (looping) {
-	drawAngle1 = gestPlayer1.getPosition() + mouseY + OFFSET;
-	drawAngle2 = gestPlayer2.getPosition();
-	gestPlayer1.resetTime();
-	gestPlayer2.resetTime();
+	gestPlayerPitch.resetTime();
+	gestPlayerNeck.resetTime();
 	if (ARDUINO_CONNECTED) {
-	    arduino.servoWrite(motorPin1, constrain(int(drawAngle1), 0, 180));
-	    arduino.servoWrite(motorPin2, constrain(int(drawAngle2), 0, 180));
+	    arduino.servoWrite(motorPinPitch, constrain(int(drawAnglePitch), 0, 180));
+	    arduino.servoWrite(motorPinNeck, constrain(int(drawAngleNeck), 0, 180));
 	}
 	delay(1000);
 	going = true;
     } 
-    else {
-	drawAngle1 = gestPlayer1.getPosition() + mouseY + OFFSET;
-    }  
-    drawAngle3 = mouseX;
+
+    drawAngleYaw = baseYaw;
+
+    if(mouseX != pmouseX || mouseY != pmouseY){
+	baseYaw = mouseX;
+	basePitch = mouseY;
+    }
 
     if (ARDUINO_CONNECTED) {
-	arduino.servoWrite(motorPin1, constrain(int(drawAngle1), 0, 180));
-	arduino.servoWrite(motorPin2, constrain(int(drawAngle2), 0, 180));
-	arduino.servoWrite(motorPin3, constrain(int(drawAngle3), 0, 180));
+	arduino.servoWrite(motorPinPitch, constrain(int(drawAnglePitch), 0, 180));
+	arduino.servoWrite(motorPinNeck, constrain(int(drawAngleNeck), 0, 180));
+	arduino.servoWrite(motorPinYaw, constrain(int(drawAngleYaw), 0, 180));
     }
 
     drawUI();
@@ -117,9 +124,9 @@ void drawUI() {
     text("Press 'o' to loop", width - 175, height - 30); 
     text("Press 'q' to quit", width - 175, height - 15); 
 
-    dial(width/4, height/2, drawAngle1);
-    dial(2*width/4, height/2, drawAngle2);
-    dial(3*width/4, height/2, drawAngle3);
+    dial(width/4, height/2, drawAnglePitch);
+    dial(2*width/4, height/2, drawAngleNeck);
+    dial(3*width/4, height/2, drawAngleYaw);
 
     popMatrix();
 }
@@ -141,10 +148,10 @@ void keyReleased() {
     if (key == 'o')
 	looping = !looping;
     if (key == 'r') {
-	drawAngle1 = gestPlayer1.getPosition();
-	//	drawAngle2 = gestPlayer2.getPosition();
-	gestPlayer1.resetTime();
-	//gestPlayer2.resetTime();
+	drawAnglePitch = gestPlayerPitch.getPosition();
+	drawAngleNeck = gestPlayerNeck.getPosition();
+	gestPlayerPitch.resetTime();
+	gestPlayerNeck.resetTime();
     }
     if (key == 'q')
 	exit();
