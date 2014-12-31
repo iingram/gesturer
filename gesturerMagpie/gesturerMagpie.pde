@@ -13,7 +13,7 @@ int motorPinPitch = 7;
 int motorPinNeck = 6;
 int motorPinYaw = 4;
 
-int scaleFactor = 4;
+int scaleFactor = 3;
 
 boolean going, looping;
 GesturePlayer gestPlayerPitch;
@@ -30,7 +30,7 @@ int baseIndex = 0;
 
 void setup() {
     frameRate(240);
-    size(180*scaleFactor, 100*scaleFactor);
+    size(180*scaleFactor, 180*scaleFactor);
     background(102);
 
     if (ARDUINO_CONNECTED) {
@@ -101,8 +101,8 @@ void draw() {
     }
 
     if(mouseX != pmouseX || mouseY != pmouseY){
-	baseYaw = mouseX;
-	basePitch = mouseY;
+	baseYaw = mouseX/scaleFactor;
+	basePitch = mouseY/scaleFactor;
     }
 
     if (ARDUINO_CONNECTED) {
@@ -134,13 +134,13 @@ void drawUI() {
     line(mouseX, 0, mouseX, height);
     
     String ms;
-    ms = String.format("MouseX is %d" + " Mouse Y is %d, ", mouseX, mouseY);
+    ms = String.format("Base- Yaw: %d" + " Pitch: %d", baseYaw, basePitch);
 
     //draw button control key
     textSize(12);
-    text(ms, width - 175, height - 110);
-    text("Press 'i' for next base", width - 175, height - 95);
-    text("Click and mouse to gesture", width - 175, height - 75); 
+    text(ms, width - 175, height - 105);
+    text("Press 'i' for next base pre-set", width - 175, height - 90);
+    text("Mouse to move base", width - 175, height - 75); 
     text("Press 'p' to play back", width - 175, height - 60);
     text("Press 'r' to rewind", width - 175, height - 45); 
     text("Press 'o' to loop", width - 175, height - 30); 
