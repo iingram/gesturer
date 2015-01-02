@@ -134,7 +134,7 @@ void drawUI() {
     line(mouseX, 0, mouseX, height);
     
     String ms;
-    ms = String.format("Base- Yaw: %d" + " Pitch: %d", baseYaw, basePitch);
+    ms = String.format("Base: Yaw: %d" + " Pitch: %d", baseYaw, basePitch);
 
     //draw button control key
     textSize(12);
