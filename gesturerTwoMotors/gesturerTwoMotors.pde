@@ -1,12 +1,12 @@
 import processing.serial.*;
 import cc.arduino.*;
 
-final boolean ARDUINO_CONNECTED = true;
+final boolean ARDUINO_CONNECTED = false;
 
 //these three lines you might want to edit
-String fileName1 = "../curves/ttt.csv";
+String fileName1 = "/Users/reidmitchell/Code/gesturer/gesturerTwoMotors/data/curves/ttt.csv";
 int motorPin1 = 4;
-String fileName2 = "../curves/ttt2.csv";
+String fileName2 = "/Users/reidmitchell/Code/gesturer/gesturerTwoMotors/data/curves/ttt.csv";
 int motorPin2 = 7;
 
 int scaleFactor = 4;
@@ -22,12 +22,13 @@ float drawAngle1, drawAngle2;
 void setup() {
     size(180*scaleFactor, 100*scaleFactor);
     background(102);
+
     
     if(ARDUINO_CONNECTED){
-	println(Arduino.list());
-	arduino = new Arduino(this, "/dev/ttyUSB0", 57600);
-	arduino.pinMode(motorPin1, Arduino.SERVO);
-	arduino.pinMode(motorPin2, Arduino.SERVO);
+      println(Arduino.list());
+      arduino = new Arduino(this, "/dev/ttyUSB0", 57600);
+      arduino.pinMode(motorPin1, Arduino.SERVO);
+      arduino.pinMode(motorPin2, Arduino.SERVO);
     }
 
     drawAngle1 = 90;
@@ -35,55 +36,54 @@ void setup() {
 
     File f = new File(fileName1);
     if (f.exists()){
-	gestPlayer1 = new GesturePlayer(fileName1);
+      gestPlayer1 = new GesturePlayer(fileName1);
     }
-    else{
-	println("\nWARNING: DATA FILE DID NOT EXIST. EXITING. \n");//
-	exit();
-    }
-
-    File f2 = new File(fileName2);
-    if (f2.exists()){
-    	gestPlayer2 = new GesturePlayer(fileName2);
-    }
-    else{
-    	println("\nWARNING: DATA FILE DID NOT EXIST. EXITING. \n");//
-    	exit();
+    else {
+      println("\nWARNING: DATA FILE DID NOT EXIST. EXITING. \n");
+      exit();
     }
     
+    File f2 = new File(fileName2);
+    if (f2.exists()){
+      gestPlayer2 = new GesturePlayer(fileName2);
+    }
+    else{
+      println("\nWARNING: DATA FILE DID NOT EXIST. EXITING. \n");
+      exit();
+    }
+  
     looping = false;
     going = false;
 }
 
 void draw() {
     if (mousePressed == false) {
-	
-	if(going){
-	    drawAngle1 = gestPlayer1.getPosition();
-	    drawAngle2 = gestPlayer2.getPosition();
-	    going = !(gestPlayer1.update(millis()));
-	    gestPlayer2.update(millis());
-	}
-	else if(looping){
-	drawAngle1 = gestPlayer1.getPosition();
-	drawAngle2 = gestPlayer2.getPosition();
-	gestPlayer1.resetTime();
-	gestPlayer2.resetTime();
-	if(ARDUINO_CONNECTED){
-	    arduino.servoWrite(motorPin1, constrain(int(drawAngle1), 0, 180));
-	    arduino.servoWrite(motorPin2, constrain(int(drawAngle2), 0, 180));
-	}
-	delay(1000);
-	going = true;
-	}
+      if(going){
+        //println("x");
+        drawAngle1 = gestPlayer1.getPosition();
+        drawAngle2 = gestPlayer2.getPosition();
+        going = !(gestPlayer1.update(millis()));
+        gestPlayer2.update(millis());
+      }
+    else if(looping){
+      drawAngle1 = gestPlayer1.getPosition();
+      drawAngle2 = gestPlayer2.getPosition();
+      gestPlayer1.resetTime();
+      gestPlayer2.resetTime();
+      if(ARDUINO_CONNECTED){
+        arduino.servoWrite(motorPin1, constrain(int(drawAngle1), 0, 180));
+        arduino.servoWrite(motorPin2, constrain(int(drawAngle2), 0, 180));
+      }
+      delay(1000);
+      going = true;
     }
-    //move the motor
-    if(ARDUINO_CONNECTED){
-	arduino.servoWrite(motorPin1, constrain(int(drawAngle1), 0, 180));
-	arduino.servoWrite(motorPin2, constrain(int(drawAngle2), 0, 180));
-    }
-    
-    drawUI();
+  }
+  //move the motor
+  if(ARDUINO_CONNECTED){
+    arduino.servoWrite(motorPin1, constrain(int(drawAngle1), 0, 180));
+    arduino.servoWrite(motorPin2, constrain(int(drawAngle2), 0, 180));
+  }
+  drawUI();
 }
 
 void drawUI(){
