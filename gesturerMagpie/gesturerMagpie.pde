@@ -3,11 +3,12 @@ import cc.arduino.*;
 import de.looksgood.ani.*;
 
 final boolean ARDUINO_CONNECTED = true;
-final int OFFSET = -60;
-final int MAX_PITCH = 140;
+final int OFFSET = -35;
+final int MIN_PITCH = 25;
+final int MAX_PITCH = 180;
 
-String fileNamePitch = "../ttt.csv";
-String fileNameNeck = "../ttt2.csv";
+String fileNamePitch = "../pitch.csv";
+String fileNameNeck = "../neck.csv";
 
 int motorPinPitch = 7;
 int motorPinNeck = 6;
@@ -25,7 +26,7 @@ int basePitch;
 int baseYaw;
 
 //int[][] bases = new int[3][2];
-int[][] bases = {{124,91},{38,91},{67,58}};
+int[][] bases = {{91,83},{157,89},{101,150}};
 int baseIndex = 0;
 
 void setup() {
@@ -89,7 +90,7 @@ void draw() {
 	gestPlayerPitch.resetTime();
 	gestPlayerNeck.resetTime();
 	if (ARDUINO_CONNECTED) {
-	    arduino.servoWrite(motorPinPitch, constrain(int(drawAnglePitch), 0, MAX_PITCH));
+	    arduino.servoWrite(motorPinPitch, constrain(int(drawAnglePitch), MIN_PITCH, MAX_PITCH));
 	    arduino.servoWrite(motorPinNeck, constrain(int(drawAngleNeck), 0, 180));
 	}
 	delay(1000);
@@ -106,7 +107,7 @@ void draw() {
     }
 
     if (ARDUINO_CONNECTED) {
-	arduino.servoWrite(motorPinPitch, constrain(int(drawAnglePitch), 0, MAX_PITCH));
+	arduino.servoWrite(motorPinPitch, constrain(int(drawAnglePitch), MIN_PITCH, MAX_PITCH));
 	arduino.servoWrite(motorPinNeck, constrain(int(drawAngleNeck), 0, 180));
 	arduino.servoWrite(motorPinYaw, constrain(int(drawAngleYaw), 0, 180));
     }
@@ -173,8 +174,8 @@ void keyReleased() {
 	baseIndex++;
 	if(baseIndex > bases.length - 1)
 	    baseIndex = 0;
-	Ani.to(this, 1.5, "basePitch", bases[baseIndex][1], Ani.QUINT_IN_OUT);
-	Ani.to(this, 1.5, "baseYaw", bases[baseIndex][0], Ani.QUINT_IN_OUT);
+	Ani.to(this, 2.5, "basePitch", bases[baseIndex][1], Ani.QUINT_IN_OUT);
+	Ani.to(this, 2.5, "baseYaw", bases[baseIndex][0], Ani.QUINT_IN_OUT);
 	// basePitch = bases[baseIndex][1];
 	// baseYaw = bases[baseIndex][0];
     }
