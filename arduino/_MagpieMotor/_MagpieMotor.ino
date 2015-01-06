@@ -1,5 +1,5 @@
 //** CONTROL GESTURE PROGRAM FOR MAGPIE ROBOT **
-//**       Jonas Jørgensen                    **
+//**    by Jonas Jørgensen                    **
 
 
 #define LEDPin 13 // Onboard LED
