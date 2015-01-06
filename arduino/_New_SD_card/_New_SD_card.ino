@@ -1,8 +1,8 @@
 //READS CHARACTERS FROM CSV FILE ONE BY ONE INTO A STRING. 
-//NEEDS TO ALSO SEPARATE TIME AND ANGLE COORDINATES IN SEPARATE ARRAYS.
+//SEPARATES TIME AND ANGLE COORDINATES IN SEPARATE ARRAYS (INT AND FLOAT RESPECTIVELY).
 
 
-// Fra: http://www.jeremyblum.com/2011/04/05/tutorial-11-for-arduino-sd-cards-and-datalogging/
+// Builds on code from: http://www.jeremyblum.com/2011/04/05/tutorial-11-for-arduino-sd-cards-and-datalogging/
 
 #include <SD.h>
 
@@ -12,23 +12,24 @@
 //SCK = PIN 13
 //SDCS = pin 10
 
-//We always need to set the CS Pin
+//Set the CS Pin:
 int CS_pin = 10; //SDCS pin
-//int pow_pin = 8;
 
-float refresh_rate = 0.0;
+//float refresh_rate = 0.0;
 
 void setup()
 {
+ 
+  //Arrays for storing magpie time and angle coordinates:
+  int time1A[255];
+  float angle1A[255];
+  int count=0; 
+  
   Serial.begin(9600);
   Serial.println("Initializing Card");
-  //CS Pin is an output
+  //CS Pin needs to be set as an output pin
   pinMode(CS_pin, OUTPUT);
-  
-  //Card will Draw Power from Pin 8, so set it high
-//  pinMode(pow_pin, OUTPUT);  
-//  digitalWrite(pow_pin, HIGH);
-  
+    
   if (!SD.begin(CS_pin))
   {
       Serial.println("Card Failure");
@@ -36,58 +37,69 @@ void setup()
   }
   Serial.println("Card Ready");
   
-  //Read the Configuration information (COMMANDS.txt)
+  //Read the file
   File commandFile = SD.open("ttt.csv");
-  String tempTime; //***********
-  String tempAngle; //***********
+  String tempTime;
+  String tempAngle; 
   if (commandFile)
   {
-    Serial.println("Reading Command File");
+    Serial.println("Reading file");
     char temp = 0;
 
-    //Discard the first line of the file ("time, value" = 11 characters) ***
+    //Discard the first line of the file ("time, value" = 11 characters)
     for (int i=0; i < 11; i++)
     {
-        temp = (commandFile.read()); //********
-        tempTime = tempTime + temp; //makes the string readString ************
+        temp = (commandFile.read()); //Read next character
     }
-    tempTime = ""; //************
+    tempTime = "";
+    tempAngle = "";
     
     while(commandFile.available())
     {
-      //Get time coordinate ***
-//      while(temp!=',')
-      {
-        //float temp = (commandFile.read() - '0'); 
-        temp = (commandFile.read()); //********
-      
-        tempTime = tempTime + temp; //makes the string readString ************
-        //refresh_rate = temp*decade+refresh_rate;
-        //decade = decade/10;
-        Serial.println(tempTime); //******
-        Serial.println("*********"); //******
-        //Serial.println(tempString); //******
-      }
-      //Get angle coordinate ***
+      //1. Get time coordinate
       while(temp!=',')
       {
         //float temp = (commandFile.read() - '0'); 
-        temp = (commandFile.read()); //********
-    
-        tempTime = tempTime + temp; //makes the string readString ************
-        //refresh_rate = temp*decade+refresh_rate;
-        //decade = decade/10;
-        Serial.println(tempTime); //******
-        //Serial.println(tempString); //******
+        temp = (commandFile.read()); 
+        tempTime = tempTime + temp; //Saves the character in the string
+      }
+      //Save time coordinate in array:
+      tempTime = tempTime.substring(0, tempTime.length() - 1); //Delete separating comma
+      time1A[count] = tempTime.toInt();//Save as int
+      temp='0';
+
+     
+      //2. Get angle coordinate
+      while(temp!='\n')
+      {
+        temp = (commandFile.read());
+        tempAngle = tempAngle + temp; 
        }
+      //Save angle coordinate in array:
+      tempAngle = tempAngle.substring(0, tempAngle.length() - 1); //Delete newline character from string
+      char floatbuf[32]; // Buffer
+      tempAngle.toCharArray(floatbuf, sizeof(floatbuf));
+      angle1A[count] = atof(floatbuf);//Save string as float
+
+      
+      //Print acquired data to serial connection
+      Serial.println("@@@@@@@@@@@@@@@@@@@@@"); 
+      Serial.println(time1A[count]); 
+      Serial.println(angle1A[count]); 
+      Serial.println("@@@@@@@@@@@@@@@@@@@@@"); 
+
+      count++; //Increase index of time and angle strings 
+
+      //Clear all temporary buffers:
+      temp='0';
+      tempTime=(char)0;
+      tempAngle=(char)0;
+      
     }
-//    Serial.print("Refresh Rate = ");
-//    Serial.print(refresh_rate);
-//    Serial.println("ms");
   }
   else
   {
-    Serial.println("Could not read command file.");
+    Serial.println("Could not read file.");
     return;
   }
   
@@ -115,5 +127,5 @@ void loop()
 //    Serial.println("Couldn't open log file");
 //  }
 //  delay(refresh_rate);
- delay(10000);
+// delay(5000);
 }
