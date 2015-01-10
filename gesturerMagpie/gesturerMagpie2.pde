@@ -1,13 +1,13 @@
-/*import processing.serial.*;
+import processing.serial.*;
 import cc.arduino.*;
 import de.looksgood.ani.*;
 
 final boolean ARDUINO_CONNECTED = false;
 final int OFFSET = -60;
 
-String toEncode = "This is a test message.";
+String toEncode = "Hello world.";
 String encodedMessage;
-int currentIndexInMessage = 0;
+int currentIndexInMessage = -1;
 final char DOT = '.';
 final char DASH = '-';
 final char LETTER_BOUNDARY = '/';
@@ -16,6 +16,12 @@ final int DOT_BASEINDEX = 0;
 final int DASH_BASEINDEX = 1;
 final int LETTER_BOUNDARY_BASEINDEX = 2;
 final int SPACE_BASEINDEX = 3;
+final int DOT_SLOWNESS = 1;
+final int DASH_SLOWNESS = 3;
+final int LETTER_BOUNDARY_SLOWNESS = 3;
+final int SPACE_SLOWNESS = 7;
+int slowness = 1;
+int timerStart, timerNow;
 
 String fileNamePitch = "/Users/reidmitchell/Code/gesturer/gesturerMagpie/data/curves/ttt.csv";
 String fileNameNeck = "/Users/reidmitchell/Code/gesturer/gesturerMagpie/data/curves/ttt.csv";
@@ -51,7 +57,7 @@ int[][] bases = {
     288, 288, 288 // SPACE ' '
   }
 };
-int baseIndex = -1;
+int baseIndex = 0;
 
 void setup() {
   frameRate(240);
@@ -118,11 +124,23 @@ void draw() {
     if(currentIndexInMessage >= encodedMessage.length()) {
       currentIndexInMessage = 0;
     }
-    baseIndex = getNextBaseIndex();
-    Ani.to(this, 2.5, "baseNeck", bases[baseIndex][2], Ani.QUINT_IN_OUT);
-    Ani.to(this, 2.5, "basePitch", bases[baseIndex][1], Ani.QUINT_IN_OUT);
-    Ani.to(this, 2.5, "baseYaw", bases[baseIndex][0], Ani.QUINT_IN_OUT);
+    print("currentIndexInMessage: "+currentIndexInMessage+", char: "+encodedMessage.charAt(currentIndexInMessage));
+    switch(encodedMessage.charAt(currentIndexInMessage)) {
+      case DOT: slowness = DOT_SLOWNESS; println(" gesturing at slowness 1"); break;
+      case DASH: slowness = DASH_SLOWNESS; println(" gesturing at slowness 3"); break;
+      case LETTER_BOUNDARY: slowness = LETTER_BOUNDARY_SLOWNESS; timerStart=millis(); println(" pausing for duration 3"); break;
+      case SPACE: slowness = SPACE_SLOWNESS; incrementBaseIndex(); timerStart=millis(); println(" transitioning for duration 7"); break;
+    }
+        
+    if(baseNeck != bases[baseIndex][2] || basePitch != bases[baseIndex][1] || baseYaw != bases[baseIndex][0]) {
+      // start a transition, if necessary
+      int transitionDuration = (gestPlayerPitch.getGestureDuration() * SPACE_SLOWNESS) / 1000;
+      Ani.to(this, transitionDuration, "baseNeck", bases[baseIndex][2], Ani.QUINT_IN_OUT);
+      Ani.to(this, transitionDuration, "basePitch", bases[baseIndex][1], Ani.QUINT_IN_OUT);
+      Ani.to(this, transitionDuration, "baseYaw", bases[baseIndex][0], Ani.QUINT_IN_OUT);
+    }
     firstTime = false;
+    
   }
   else if (going && transitioning && !firstTime) {
     // wait for transition to complete before beginning the gesture
@@ -131,19 +149,27 @@ void draw() {
     }
   }
   else if (going && !transitioning) {
-    // perform the gesture
-    going = !(gestPlayerPitch.update(millis()));
-    gestPlayerNeck.update(millis());
-  }
-  else if (going && !transitioning && !firstTime) {
-    println("lol"+millis()); 
+    // either perform the gesture or pause for the right duration
+    if(encodedMessage.charAt(currentIndexInMessage)==SPACE) {
+      println("space reached");
+      going = false;
+    } else if(encodedMessage.charAt(currentIndexInMessage)==LETTER_BOUNDARY) {
+      timerNow = millis();
+      if(timerNow-timerStart >= gestPlayerPitch.getGestureDuration()*LETTER_BOUNDARY_SLOWNESS) {
+        going = false;
+      }      
+    } else {
+      going = !(gestPlayerPitch.update(millis(),slowness));
+      gestPlayerNeck.update(millis(),slowness);
+    }
   }
   else if (!going && !transitioning && !firstTime) {
     // gesture complete. restart the cycle: transition -> perform gesture -> finish gesture
     going = transitioning = firstTime = true;
-    
+    currentIndexInMessage++;
     gestPlayerPitch.resetTime();
     gestPlayerNeck.resetTime();
+
   }
 
   if (mouseX != pmouseX || mouseY != pmouseY) {
@@ -238,6 +264,19 @@ void keyReleased() {
     exit();
 }
 
+int incrementBaseIndex() {
+  baseIndex++;
+    if (baseIndex > bases.length - 1)
+      baseIndex = 0;
+  return baseIndex;
+}
+
+char getNextCharacter() {
+  char c = encodedMessage.charAt(currentIndexInMessage);
+  currentIndexInMessage++;
+  return c;
+}
+
 int getNextBaseIndex() {
   println("currentIndexInMessage: "+currentIndexInMessage);
   char c = encodedMessage.charAt(currentIndexInMessage);
@@ -309,4 +348,4 @@ String encodeMorse(String m) {
     out+=LETTER_BOUNDARY;
   }
   return out;
-}*/
+}
