@@ -12,7 +12,7 @@ String fileNameNeck = "../neck.csv";
 
 int motorPinPitch = 7;
 int motorPinNeck = 6;
-int motorPinYaw = 4;
+int motorPinYaw = 8;
 
 int scaleFactor = 3;
 
