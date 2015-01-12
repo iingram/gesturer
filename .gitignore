@@ -6,4 +6,7 @@ gesturerOneMotor/GesturePlayer.pde
 gesturerOneMotor/GestureRecorder.pde
 gesturerTwoMotors/GesturePlayer.pde
 gesturerTwoMotors/GestureRecorder.pde
+gesturerMagpie/GesturePlayer.pde
+gesturerMagpie/GestureRecorder.pde
 *.fbx
+*.csv
