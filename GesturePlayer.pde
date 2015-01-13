@@ -54,7 +54,7 @@ class GesturePlayer {
     backAtZero = false;
 
     if (iTime - sTime >= cTime) {
-      rowNum+=speed;
+      rowNum++;
       if (rowNum >= numRows) {
         rowNum = 0;
         backAtZero = true;

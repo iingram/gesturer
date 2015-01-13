@@ -21,7 +21,7 @@ final int DASH_SPEED = 1;
 final int LETTER_BOUNDARY_SPEED = 3;
 final int SPACE_SPEED = 7;
 int speed = 1;
-int timerStart, timerNow;
+int timerStart, timerNow, transitionEndTime;
 
 String fileNamePitch = "/Users/reidmitchell/Code/gesturer/gesturerMagpie/data/curves/ttt.csv";
 String fileNameNeck = "/Users/reidmitchell/Code/gesturer/gesturerMagpie/data/curves/ttt.csv";
@@ -127,24 +127,29 @@ void draw() {
     print("currentIndexInMessage: "+currentIndexInMessage+", char: "+encodedMessage.charAt(currentIndexInMessage));
     switch(encodedMessage.charAt(currentIndexInMessage)) {
       case DOT: speed = DOT_SPEED; println(" gesturing at speed 3"); break;
-      case DASH: speed = DASH_SPEED; println(" gesturing at slowness 3"); break;
-      case LETTER_BOUNDARY: speed = LETTER_BOUNDARY_SPEED; timerStart=millis(); println(" pausing for duration 3"); break;
-      case SPACE: speed = SPACE_SPEED; incrementBaseIndex(); timerStart=millis(); println(" transitioning for duration 7"); break;
+      case DASH: speed = DASH_SPEED; println(" gesturing at speed 1"); break;
+      case LETTER_BOUNDARY: speed = LETTER_BOUNDARY_SPEED; timerStart=millis(); println(" pausing for gesture duration * 3"); break;
+      case SPACE: speed = SPACE_SPEED; incrementBaseIndex(); timerStart=millis(); println(" transitioning for gesture duration * 7"); break;
     }
         
     if(baseNeck != bases[baseIndex][2] || basePitch != bases[baseIndex][1] || baseYaw != bases[baseIndex][0]) {
       // start a transition, if necessary
-      int transitionDuration = (gestPlayerPitch.getGestureDuration() * SPACE_SPEED) / 1000;
-      Ani.to(this, transitionDuration, "baseNeck", bases[baseIndex][2], Ani.QUINT_IN_OUT);
-      Ani.to(this, transitionDuration, "basePitch", bases[baseIndex][1], Ani.QUINT_IN_OUT);
-      Ani.to(this, transitionDuration, "baseYaw", bases[baseIndex][0], Ani.QUINT_IN_OUT);
+      int transitionDuration = (gestPlayerPitch.getGestureDuration() * SPACE_SPEED);
+      if (transitionDuration > 4500) {
+        transitionEndTime = millis()+transitionDuration;
+      } else {
+        transitionEndTime = 0;
+      }
+      Ani.to(this, 4.5, "baseNeck", bases[baseIndex][2], Ani.QUINT_IN_OUT);
+      Ani.to(this, 4.5, "basePitch", bases[baseIndex][1], Ani.QUINT_IN_OUT);
+      Ani.to(this, 4.5, "baseYaw", bases[baseIndex][0], Ani.QUINT_IN_OUT);
     }
     firstTime = false;
     
   }
   else if (going && transitioning && !firstTime) {
     // wait for transition to complete before beginning the gesture
-    if(baseNeck==bases[baseIndex][2] && basePitch==bases[baseIndex][1] && baseYaw==bases[baseIndex][0]) {
+    if(millis()>=transitionEndTime && baseNeck==bases[baseIndex][2] && basePitch==bases[baseIndex][1] && baseYaw==bases[baseIndex][0]) {
       transitioning = false;
     }
   }
