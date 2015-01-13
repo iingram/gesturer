@@ -47,21 +47,21 @@ class GesturePlayer {
     return backAtZero;
   }
   
-  boolean update(float iTime, int slowFactor) {
+  boolean update(float iTime, int speed) {
     if (backAtZero)
       sTime = millis();
 
     backAtZero = false;
 
     if (iTime - sTime >= cTime) {
-      rowNum++;
+      rowNum+=speed;
       if (rowNum >= numRows) {
         rowNum = 0;
         backAtZero = true;
       }
 
       theRow = table.getRow(rowNum);
-      cTime = theRow.getInt("time") * slowFactor;
+      cTime = theRow.getInt("time") / speed;
       position = theRow.getFloat("value");
     } 
     return backAtZero;
@@ -81,7 +81,7 @@ class GesturePlayer {
   
   int getGestureDuration() {
     TableRow finalRow = table.getRow(table.getRowCount()-1);
-    return finalRow.getInt("time");
+    return finalRow.getInt("time")/3;
   }
 }
 

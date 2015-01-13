@@ -16,11 +16,11 @@ final int DOT_BASEINDEX = 0;
 final int DASH_BASEINDEX = 1;
 final int LETTER_BOUNDARY_BASEINDEX = 2;
 final int SPACE_BASEINDEX = 3;
-final int DOT_SLOWNESS = 1;
-final int DASH_SLOWNESS = 3;
-final int LETTER_BOUNDARY_SLOWNESS = 3;
-final int SPACE_SLOWNESS = 7;
-int slowness = 1;
+final int DOT_SPEED = 3;
+final int DASH_SPEED = 1;
+final int LETTER_BOUNDARY_SPEED = 3;
+final int SPACE_SPEED = 7;
+int speed = 1;
 int timerStart, timerNow;
 
 String fileNamePitch = "/Users/reidmitchell/Code/gesturer/gesturerMagpie/data/curves/ttt.csv";
@@ -126,15 +126,15 @@ void draw() {
     }
     print("currentIndexInMessage: "+currentIndexInMessage+", char: "+encodedMessage.charAt(currentIndexInMessage));
     switch(encodedMessage.charAt(currentIndexInMessage)) {
-      case DOT: slowness = DOT_SLOWNESS; println(" gesturing at slowness 1"); break;
-      case DASH: slowness = DASH_SLOWNESS; println(" gesturing at slowness 3"); break;
-      case LETTER_BOUNDARY: slowness = LETTER_BOUNDARY_SLOWNESS; timerStart=millis(); println(" pausing for duration 3"); break;
-      case SPACE: slowness = SPACE_SLOWNESS; incrementBaseIndex(); timerStart=millis(); println(" transitioning for duration 7"); break;
+      case DOT: speed = DOT_SPEED; println(" gesturing at speed 3"); break;
+      case DASH: speed = DASH_SPEED; println(" gesturing at slowness 3"); break;
+      case LETTER_BOUNDARY: speed = LETTER_BOUNDARY_SPEED; timerStart=millis(); println(" pausing for duration 3"); break;
+      case SPACE: speed = SPACE_SPEED; incrementBaseIndex(); timerStart=millis(); println(" transitioning for duration 7"); break;
     }
         
     if(baseNeck != bases[baseIndex][2] || basePitch != bases[baseIndex][1] || baseYaw != bases[baseIndex][0]) {
       // start a transition, if necessary
-      int transitionDuration = (gestPlayerPitch.getGestureDuration() * SPACE_SLOWNESS) / 1000;
+      int transitionDuration = (gestPlayerPitch.getGestureDuration() * SPACE_SPEED) / 1000;
       Ani.to(this, transitionDuration, "baseNeck", bases[baseIndex][2], Ani.QUINT_IN_OUT);
       Ani.to(this, transitionDuration, "basePitch", bases[baseIndex][1], Ani.QUINT_IN_OUT);
       Ani.to(this, transitionDuration, "baseYaw", bases[baseIndex][0], Ani.QUINT_IN_OUT);
@@ -155,12 +155,12 @@ void draw() {
       going = false;
     } else if(encodedMessage.charAt(currentIndexInMessage)==LETTER_BOUNDARY) {
       timerNow = millis();
-      if(timerNow-timerStart >= gestPlayerPitch.getGestureDuration()*LETTER_BOUNDARY_SLOWNESS) {
+      if(timerNow-timerStart >= gestPlayerPitch.getGestureDuration()*LETTER_BOUNDARY_SPEED) {
         going = false;
       }      
     } else {
-      going = !(gestPlayerPitch.update(millis(),slowness));
-      gestPlayerNeck.update(millis(),slowness);
+      going = !(gestPlayerPitch.update(millis(),speed));
+      gestPlayerNeck.update(millis(),speed);
     }
   }
   else if (!going && !transitioning && !firstTime) {
@@ -346,6 +346,11 @@ String encodeMorse(String m) {
       case ' ': out+= SPACE; break;
     }
     out+=LETTER_BOUNDARY;
+  }
+  out = out.replace("/ "," ");
+  out = out.replace(" /"," ");
+  if(out.charAt(out.length()-1)=='/') {
+    out = out.substring(0,out.length()-1);
   }
   return out;
 }
