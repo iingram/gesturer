@@ -1,4 +1,7 @@
 #!/usr/bin/perl
+
+# EXAMPLE USAGE: cat animData.fbx | ./cleanAnimData.pl "Cube" "R" "Y" "-50" "-1" > pitch.csv
+
 use strict;
 use warnings;
 
