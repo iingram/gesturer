@@ -2,9 +2,11 @@ import processing.serial.*;
 import cc.arduino.*;
 
 final String fileName = "data.csv";
+final String usbPort = "/dev/ttyUSB0";
+final String TIME_CURVE_FILENAME = "curves/timeCurve.csv";
 
 final boolean USE_OWN_CURVE = false;
-final boolean ARDUINO_CONNECTED = true;
+final boolean ARDUINO_CONNECTED = false;
 
 final int NUM_MOTORS = 3;
 
@@ -16,7 +18,7 @@ final float MOVE_GAIN_1 = 1.8;
 
 boolean going[] = new boolean[NUM_MOTORS];
 GesturePlayer[] gestPlayer = new GesturePlayer[NUM_MOTORS];
-GestureRecorder gestRecorder;
+GestureRecorder gestRecorder, tempRecorder;
 
 Arduino arduino;
 Motor[] motor = new Motor[NUM_MOTORS];
@@ -31,7 +33,7 @@ void setup() {
     println(Arduino.list());
 
     if(ARDUINO_CONNECTED)
-	arduino = new Arduino(this, "/dev/ttyUSB0", 57600);
+	arduino = new Arduino(this, usbPort, 57600);
 
     //    motor[0] = new Motor(arduino, 12);
     //motor[1] = new Motor(arduino, 7);
@@ -59,8 +61,16 @@ void setup() {
     for(int i = 0; i < gestPlayer.length; i++){
 	if(USE_OWN_CURVE)
 	    gestPlayer[i] = new GesturePlayer(fileName);
-	else
-	    gestPlayer[i] = new GesturePlayer("curves/timeCurve.csv");
+	else{
+	    if(fileExists(TIME_CURVE_FILENAME))
+		gestPlayer[i] = new GesturePlayer(TIME_CURVE_FILENAME);
+	    else{
+		tempRecorder = new GestureRecorder(TIME_CURVE_FILENAME);
+		tempRecorder.clear();
+		tempRecorder.addPosition(0);
+		gestPlayer[i] = new GesturePlayer(TIME_CURVE_FILENAME);
+	    }
+	}
 	going[i] = false;
     }
 
@@ -158,3 +168,14 @@ void readPipe() {
 	going[1] = true;
     }
 }
+
+boolean fileExists(String path) {
+  File file=new File(path);
+  boolean exists = file.exists();
+  if (exists) {
+    return true;
+  }
+  else {
+    return false;
+  }
+} 
