@@ -1,6 +1,13 @@
 #!/usr/bin/perl
 
 # EXAMPLE USAGE: cat animData.fbx | ./cleanAnimData.pl "Cube" "R" "Y" "-50" "-1" > pitch.csv
+# argv[1] = name of object as named in blender
+# argv[2] = type of transformation
+#           axis
+#           offset (add to every rotation value)
+#           multiplier (for reversing rotation if coordinate system is opp. of motors)
+#           output     > pitch/yaw/roll.csv
+#           
 
 use strict;
 use warnings;
