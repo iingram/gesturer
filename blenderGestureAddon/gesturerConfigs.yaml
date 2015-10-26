@@ -1,0 +1,10 @@
+objectNames:
+    - Cube.001
+    - Cube
+objectAxes:
+    - 0
+    - 1
+objectOffsets:
+    - 90
+    - 90
+numObjects: 1
