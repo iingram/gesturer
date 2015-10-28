@@ -20,7 +20,7 @@ bl_info = {
 
 # Setup serial communication with Arduino
 # Hardcoded for my current connection to the Arduino on my computer (Sky)
-serialPort = serial.Serial('/dev/tty.usbmodem1411', 9600)
+serialPort = serial.Serial('/dev/tty.usbmodem1411', 9600, timeout = 0)
 #serialPort = serial.Serial()
 
 
@@ -38,15 +38,43 @@ def my_handler(scene):
 
     # Hardcode the object we want selected to be the body of the magpie 
 
+    # NOTE: This should be chagned to create an array of zeros the length of the number
+    # of objects
+    newAngles = [0] * GestureOperator.numObjects
+    shouldResend = False
+
     # Generalized loop for putting an arbitrary number of object parameters out 
     # on the serial connection
     for i in range(GestureOperator.numObjects):
         object = bpy.data.objects[GestureOperator.objectNames[i]]
         movement = degrees(object.rotation_euler[GestureOperator.objectAxes[i]])
         servoAngle = chr(int(GestureOperator.objectOffsets[i] + movement))
-        print("Servo" + str(i) + " angle is: " + str(ord(servoAngle)))
+        newAngles[i] = servoAngle
+
+        if (servoAngle != GestureOperator.previousServoAngles[i]):
+        #print("Servo" + str(i) + " angle is: " + str(ord(servoAngle)))
         #serialPort.write(chr(i + 181).encode())
-        serialPort.write(servoAngle.encode())
+            shouldResend = True
+            #serialPort.write(servoAngle.encode())
+            #GestureOperator.previousServoAngles[i] = servoAngle
+
+        serialInput = serialPort.read()
+        if (len(serialInput) > 0):
+            print(str(ord(serialInput)))
+
+    if (shouldResend == True):
+        for i in range(GestureOperator.numObjects):
+            serialPort.write(newAngles[i].encode())
+            GestureOperator.previousServoAngles[i] = newAngles[i]
+
+            serialInput = serialPort.read()
+            if (len(serialInput) > 0):
+                print(str(ord(serialInput)))
+        shouldResend = False
+
+    serialInput = serialPort.read()
+    if (len(serialInput) > 0):
+        print(str(ord(serialInput)))
    
 
 # GestureOperator class
@@ -61,7 +89,10 @@ class GestureOperator(bpy.types.Operator):
     objectNames = []
     objectAxes = []
     objectOffsets = []
-    numObjects = []
+    numObjects = 0
+    # NOTE: DANGER DANGER WILL ROBINSON THIS IS A HARDCODE
+    #       read in the length of this array from configs
+    previousServoAngles = [0]
 
     # Boolean to see if the scene handler should be set or reset
     isHandling = False
@@ -80,6 +111,7 @@ class GestureOperator(bpy.types.Operator):
             GestureOperator.objectAxes = GestureOperator.configs["objectAxes"]
             GestureOperator.objectOffsets = GestureOperator.configs["objectOffsets"]
             GestureOperator.numObjects = GestureOperator.configs["numObjects"]
+            GestureOperator.previousServoAngles = [0] * GestureOperator.numObjects
             # Currently, only load the configs when the "Gesture Operator" 
             # is first called
             GestureOperator.loadConfigs = False
