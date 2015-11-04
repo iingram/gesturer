@@ -1,7 +1,14 @@
+# gestureDeveloper.py
+# Created by Skyler Williams
+#
+# Blender plugin to help develop gestures for robotics. 
+# 
+
 import bpy
 import serial
 import yaml
 import os
+import struct
 from time import sleep
 from math import degrees
 
@@ -20,7 +27,19 @@ bl_info = {
 
 # Setup serial communication with Arduino
 # Hardcoded for my current connection to the Arduino on my computer (Sky)
-serialPort = serial.Serial('/dev/tty.usbmodem1411', 9600, timeout = 0)
+
+# Originally working without sending addressing value
+# serialPort = serial.Serial('/dev/tty.usbmodem1411', 9600, timeout = 0)
+ 
+# Testing with infinite timeout, so blocking until it hears back from Arduino
+# NOTE: This will most likely fail entirely, as we have been missing some bytes
+#        occasionally on the Arduino side so we will probably not hear back after
+#        some transmission
+# ACTUALLY: This provides a nice check that our Serial communication is working
+#            properly. If Serial fails, then all of Blender will lock up. This is
+#            currently desired behavior but this is open for discussion!
+serialPort = serial.Serial('/dev/tty.usbmodem1411', 9600, timeout = None)
+
 #serialPort = serial.Serial()
 
 
@@ -35,11 +54,6 @@ def my_handler(scene):
     #       - Offset for the angle of each motor
     #       - 
 
-
-    # Hardcode the object we want selected to be the body of the magpie 
-
-    # NOTE: This should be chagned to create an array of zeros the length of the number
-    # of objects
     newAngles = [0] * GestureOperator.numObjects
     shouldResend = False
 
@@ -48,33 +62,50 @@ def my_handler(scene):
     for i in range(GestureOperator.numObjects):
         object = bpy.data.objects[GestureOperator.objectNames[i]]
         movement = degrees(object.rotation_euler[GestureOperator.objectAxes[i]])
-        servoAngle = chr(int(GestureOperator.objectOffsets[i] + movement))
+        servoAngle = int(GestureOperator.objectOffsets[i] + movement)
         newAngles[i] = servoAngle
 
-        if (servoAngle != GestureOperator.previousServoAngles[i]):
-        #print("Servo" + str(i) + " angle is: " + str(ord(servoAngle)))
-        #serialPort.write(chr(i + 181).encode())
-            shouldResend = True
-            #serialPort.write(servoAngle.encode())
-            #GestureOperator.previousServoAngles[i] = servoAngle
 
-        serialInput = serialPort.read()
-        if (len(serialInput) > 0):
-            print(str(ord(serialInput)))
+        #######################################################################
+        # NOTE: having issues sending char values above 128 or so!!!!!! fixed!
+        # Solution: issue was every time a larger char value was sent, we would 
+        # get a byte of value 194 before the return, so we just read away that 
+        # byte if it exists
+        #
+        # DANGER DANGER: This is a temporary fix, we need to find out what is 
+        # really going on
+        # HALLELUJAH! Using struct.pack to create actual bytes rather than using
+        # chars was the key!!! Avoid chr() from now on.
+
+        # If the angle of a motor has changed, rewrite them all to Arduino
+        if (servoAngle != GestureOperator.previousServoAngles[i]):
+            shouldResend = True
 
     if (shouldResend == True):
         for i in range(GestureOperator.numObjects):
-            serialPort.write(newAngles[i].encode())
+            #serialPort.write(newAngles[i].encode())
+            serialPort.write(struct.pack('B', newAngles[i]))
             GestureOperator.previousServoAngles[i] = newAngles[i]
+            print("Write angle " + str(i) + " is: " + str(newAngles[i]))
 
             serialInput = serialPort.read()
-            if (len(serialInput) > 0):
-                print(str(ord(serialInput)))
+            # If we receive a value of 194, this *was* an odd error due to sending
+            # a value larger than 128, but won't work for our Servos so we ignore it
+            #
+            # Most likely get rid of this as we now do not have this issue because
+            # we are creating bytes with struct.pack not chr()
+            if (ord(serialInput) == 194):
+                print("Read bad char: " + str(ord(serialInput)))
+                serialInput = serialPort.read()
+            print("Read angle " + str(i) + " is: " + str(ord(serialInput)))
+
+            if (ord(serialInput) != newAngles[i]):
+                stop_operator()
+                print("Serial input not equal to serial output")
+                break
         shouldResend = False
 
-    serialInput = serialPort.read()
-    if (len(serialInput) > 0):
-        print(str(ord(serialInput)))
+    # non_blocking_read()
    
 
 # GestureOperator class
@@ -86,13 +117,11 @@ class GestureOperator(bpy.types.Operator):
     # Raw configuration data
     configs = {}
     # Extracted configuration data
+    numObjects = 0
     objectNames = []
     objectAxes = []
     objectOffsets = []
-    numObjects = 0
-    # NOTE: DANGER DANGER WILL ROBINSON THIS IS A HARDCODE
-    #       read in the length of this array from configs
-    previousServoAngles = [0]
+    previousServoAngles = []
 
     # Boolean to see if the scene handler should be set or reset
     isHandling = False
@@ -134,19 +163,32 @@ class GestureOperator(bpy.types.Operator):
         return {'FINISHED'}
       
 
-# Attempt to add a button for performing the "Gesture Operator"
-def add_object_button(self, context):  
-    self.layout.operator(  
-        GestureOperator.bl_idname,  
-        text=GestureOperator.__doc__,  
-        icon='PLUGIN') 
+
+def non_blocking_read():
+    serialPort.timeout = 0
+    serialInput = serialPort.read()
+    serialPort.timeout = None
+
+    if (len(serialInput) > 0):
+        print("Non-blocking read received: " + str(ord(serialInput)))
+        return serialInput
+
+    return None
+
+
+def stop_operator():
+    myHandlerList = bpy.app.handlers.scene_update_pre
+    numHandlers = len(myHandlerList)
+    for handlerID, function in enumerate(reversed(myHandlerList)):
+        if function.__name__ == 'my_handler':
+            myHandlerList.pop(numHandlers - 1 - handlerID)
+    GestureOperator.isHandling = False
 
 
 # Register the GestureOperator class with Blender  
 def register():  
     bpy.utils.register_class(GestureOperator) 
     # Add the button for activating the "Gesture Operator" to the 3d View
-    # bpy.types.VIEW3D_MT_object.append(add_object_button) 
 
 # For testing purposes, so the script will register the class when called directly
 if __name__ == "__main__":  
