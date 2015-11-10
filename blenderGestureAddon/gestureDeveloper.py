@@ -24,36 +24,31 @@ bl_info = {
  "wiki_url": "",  
  "tracker_url": "",  
  "category": "Object"} 
-
-# Setup serial communication with Arduino
-# Hardcoded for my current connection to the Arduino on my computer (Sky)
-
-# Originally working without sending addressing value
-# serialPort = serial.Serial('/dev/tty.usbmodem1411', 9600, timeout = 0)
  
-# Testing with infinite timeout, so blocking until it hears back from Arduino
-# NOTE: This will most likely fail entirely, as we have been missing some bytes
-#        occasionally on the Arduino side so we will probably not hear back after
-#        some transmission
-# ACTUALLY: This provides a nice check that our Serial communication is working
-#            properly. If Serial fails, then all of Blender will lock up. This is
-#            currently desired behavior but this is open for discussion!
-serialPort = serial.Serial('/dev/tty.usbmodem1411', 9600, timeout = None)
-
-#serialPort = serial.Serial()
+# Create a global timeout variable, so we can reset the timeout after performing
+# a non-blocking read
+globalTimeout = None
 
 
-# Scene handler
+# Create a PySerial port with infinite timeout (blocks on reads), but not yet
+# connected to a hardware port (read in from configs)
+serialPort = serial.Serial(None, 9600, timeout = globalTimeout)
+
+# gesture_handler(scene)
+#
 # To be called any time there is a change within the scene (e.g. position change,
 # rotation change, current frame change)
-def my_handler(scene):
+def gesture_handler(scene):
     # Want the YAML to include:
     #       - Name of the object
     #       - Arrtibute to watch (rotation x,y,z for now)
     #       - Number of data points to write out to serial (maybe a dictionary?)
     #       - Offset for the angle of each motor
-    #       - 
+    #       - Addressing scheme for motors
+    #       - Serial port to connect through
 
+    # Create an array to store the angles we get from the Blender scene, and a
+    # bool to see if we should send these values to the Arduino
     newAngles = [0] * GestureOperator.numObjects
     shouldResend = False
 
@@ -65,50 +60,49 @@ def my_handler(scene):
         servoAngle = int(GestureOperator.objectOffsets[i] + movement)
         newAngles[i] = servoAngle
 
-
-        #######################################################################
-        # NOTE: having issues sending char values above 128 or so!!!!!! fixed!
-        # Solution: issue was every time a larger char value was sent, we would 
-        # get a byte of value 194 before the return, so we just read away that 
-        # byte if it exists
-        #
-        # DANGER DANGER: This is a temporary fix, we need to find out what is 
-        # really going on
-        # HALLELUJAH! Using struct.pack to create actual bytes rather than using
-        # chars was the key!!! Avoid chr() from now on.
-
         # If the angle of a motor has changed, rewrite them all to Arduino
         if (servoAngle != GestureOperator.previousServoAngles[i]):
             shouldResend = True
+            GestureOperator.previousServoAngles[i] = newAngles[i]
 
+    # If we should resend the motor positons, loop through and send each based
+    # on the motor identification scheme (addressing/switching)
     if (shouldResend == True):
         for i in range(GestureOperator.numObjects):
-            #serialPort.write(newAngles[i].encode())
+            # If we are addressing motors, first send "i"
+            if (GestureOperator.motorIdentification == "addressing"):
+                serialPort.write(struct.pack('B', i))
+                serialRead = serialPort.read()
+                # NOTE:
+                # Need to check if it's a chr or "string of length 0" before
+                # we print to stop getting that error and to see what's going on
+                print("Address is: " + str(ord(serialRead)))
+                if (ord(serialRead) != i):
+                    stop_operator()
+                    print("Serial send not equal to serial return")
+                    break
+
             serialPort.write(struct.pack('B', newAngles[i]))
-            GestureOperator.previousServoAngles[i] = newAngles[i]
+            # GestureOperator.previousServoAngles[i] = newAngles[i]
             print("Write angle " + str(i) + " is: " + str(newAngles[i]))
 
-            serialInput = serialPort.read()
-            # If we receive a value of 194, this *was* an odd error due to sending
-            # a value larger than 128, but won't work for our Servos so we ignore it
-            #
-            # Most likely get rid of this as we now do not have this issue because
-            # we are creating bytes with struct.pack not chr()
-            if (ord(serialInput) == 194):
-                print("Read bad char: " + str(ord(serialInput)))
-                serialInput = serialPort.read()
-            print("Read angle " + str(i) + " is: " + str(ord(serialInput)))
-
-            if (ord(serialInput) != newAngles[i]):
+            serialRead = serialPort.read()
+            # NOTE:
+            # Need to check if it's a chr or "string of length 0" before
+            # we print to stop getting that error and to see what's going on
+            print("Read angle " + str(i) + " is: " + str(ord(serialRead)))
+            if (ord(serialRead) != newAngles[i]):
                 stop_operator()
-                print("Serial input not equal to serial output")
+                print("Serial send not equal to serial return")
                 break
         shouldResend = False
-
-    # non_blocking_read()
    
 
 # GestureOperator class
+#
+# Blender Addons are implemented via Python classes, so we create a class here
+# and populate it with the desired logic in the methods required by Blender.
+#
 class GestureOperator(bpy.types.Operator): 
     # Blender Addon internals 
     bl_idname = "object.gesture_operator"  
@@ -122,13 +116,16 @@ class GestureOperator(bpy.types.Operator):
     objectAxes = []
     objectOffsets = []
     previousServoAngles = []
+    motorIdentification = ""
 
     # Boolean to see if the scene handler should be set or reset
     isHandling = False
     # Boolean to see if we should load in configuration data
     loadConfigs = True
-  
-    # Run on execution of the "Gesture Operator"
+    
+    # execute(self, context)
+    #
+    # Run on execution of the "Gesture Operator". Required function.
     def execute(self, context):
         # Check if we should load the configs (and do so if necessary)
         if GestureOperator.loadConfigs == True:
@@ -140,52 +137,64 @@ class GestureOperator(bpy.types.Operator):
             GestureOperator.objectAxes = GestureOperator.configs["objectAxes"]
             GestureOperator.objectOffsets = GestureOperator.configs["objectOffsets"]
             GestureOperator.numObjects = GestureOperator.configs["numObjects"]
+            GestureOperator.motorIdentification = GestureOperator.configs["motorIdentification"]
             GestureOperator.previousServoAngles = [0] * GestureOperator.numObjects
+            serialPort.port = GestureOperator.configs["serialPort"]
             # Currently, only load the configs when the "Gesture Operator" 
             # is first called
             GestureOperator.loadConfigs = False
 
-        # If we are not currently handling scene changes, set function "my_handler"
+        # If we are not currently handling scene changes, set function "gesture_handler"
         # to be run every scene change
-        if GestureOperator.isHandling == False:  
-            bpy.app.handlers.scene_update_pre.append(my_handler)
+        if GestureOperator.isHandling == False: 
+            # NOTE: This takes a moment to actually open, so we want to wait until
+            #   we know it's open to add our handler to the scene update. Need to
+            #   find a better way than hardcoding a sleep value, but it works for now 
+            serialPort.open()
+            print("Opening Serial port, waiting for 2 seconds to connect...")
+            sleep(2)
+            bpy.app.handlers.scene_update_pre.append(gesture_handler)
             GestureOperator.isHandling = True
         # If we were handling scene changes, remove our handler from the handler list
         # by reverse enumerating and popping it off
         else:
-            myHandlerList = bpy.app.handlers.scene_update_pre
-            numHandlers = len(myHandlerList)
-            for handlerID, function in enumerate(reversed(myHandlerList)):
-                if function.__name__ == 'my_handler':
-                    myHandlerList.pop(numHandlers - 1 - handlerID)
-            GestureOperator.isHandling = False
+            stop_operator()
         # Blender Python internals, must return {'FINISHED'}
         return {'FINISHED'}
       
 
-
+# non_blocking_read()
+# 
+# Performs a non-blocking read on the global serialPort by setting the timeout
+# to 0, reading, and then setting the timeout back to the globalTimeout value.
 def non_blocking_read():
     serialPort.timeout = 0
-    serialInput = serialPort.read()
-    serialPort.timeout = None
+    serialRead = serialPort.read()
+    serialPort.timeout = globalTimeout
 
-    if (len(serialInput) > 0):
-        print("Non-blocking read received: " + str(ord(serialInput)))
-        return serialInput
+    if (len(serialRead) > 0):
+        print("Non-blocking read received: " + str(ord(serialRead)))
+        return serialRead
 
     return None
 
 
+# stop_operator()
+#
+# Stops the function of the addon by removing the scene handler we added to 
+# capture and send object positions, and by closing the serial port. 
 def stop_operator():
     myHandlerList = bpy.app.handlers.scene_update_pre
     numHandlers = len(myHandlerList)
     for handlerID, function in enumerate(reversed(myHandlerList)):
-        if function.__name__ == 'my_handler':
+        if function.__name__ == 'gesture_handler':
             myHandlerList.pop(numHandlers - 1 - handlerID)
+    serialPort.close()
     GestureOperator.isHandling = False
 
-
-# Register the GestureOperator class with Blender  
+# register()
+#
+# Registers the GestureOperator class with Blender. Required function. 
 def register():  
     bpy.utils.register_class(GestureOperator) 
     # Add the button for activating the "Gesture Operator" to the 3d View
