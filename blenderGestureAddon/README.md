@@ -30,7 +30,12 @@ Usage
 =====================
 
 0. Connect Arduino (running the receiving software) based robot to computer.
-1. Open `prototype_gesture_addon_scene_handler.blend` with Blender (via the command line if you want to see Python output, which is recommended). 
+1a. Standard Usage: Open `prototype_gesture_addon_scene_handler.blend` with Blender (via the command line if you want to see Python output, which is recommended).
+1b. More general usage: 
+    -Modify gesturerConfigs.yaml to match the parameters you desire to use from your `.blend` file and for your hardware setup (object names, desired axes, serial port, etc.).
+    -Put `gesturerConfigs.yaml` in the same folder as the `.blend` file you are using.
+    -Open Blender via the command line (watch the command line as you go through the steps below to make sure you don't get any fatal errors!).
+    -Navigate to and open your `.blend` file.
 2. Navigate to `File/User Preferences/Add-ons`.
 3. Select the "Object" category.
 4. Find "Object: Gesture Operator" addon and select the checkbox next to it.

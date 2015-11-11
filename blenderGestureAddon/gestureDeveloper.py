@@ -71,13 +71,13 @@ def gesture_handler(scene):
         for i in range(GestureOperator.numObjects):
             # If we are addressing motors, first send "i"
             if (GestureOperator.motorIdentification == "addressing"):
-                serialPort.write(struct.pack('B', i))
+                serialPort.write(struct.pack('B', (181 + i)))
                 serialRead = serialPort.read()
                 # NOTE:
                 # Need to check if it's a chr or "string of length 0" before
                 # we print to stop getting that error and to see what's going on
                 print("Address is: " + str(ord(serialRead)))
-                if (ord(serialRead) != i):
+                if (ord(serialRead) != (181 + i)):
                     stop_operator()
                     print("Serial send not equal to serial return")
                     break
