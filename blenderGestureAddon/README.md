@@ -33,11 +33,13 @@ Usage
 1. Run `generateArduino.py` with `gesturerConfigs.yaml` and `motors_template.ino` present in the current directory to generate Arduino code.
 3. Upload this generated code to your robot, and leave your robot connected to the computer.
 4. Open the proper `.blend` file in Blender.
-⋅⋅* Provided Blender File: Open `prototype_gesture_addon_scene_handler.blend` with Blender (via the command line if you want to see Python output, which is recommended).
-⋅⋅* General Blender File: 
-    -Put `gesturerConfigs.yaml` in the same folder as the `.blend` file you are using.
-    -Open Blender (if via the command line, watch the output as you go through the steps below to make sure you don't get any fatal errors!).
-    -Navigate to and open your `.blend` file.
+    * Provided Blender File: 
+        - Open Blender (via the command line if you want to see Python output, which is recommended).
+        - Navigate to `gesturer/blenderGestureAddon/` and open the file `prototype_gesture_addon_scene_handler.blend`.
+    * General Blender File: 
+        - Put `gesturerConfigs.yaml` in the same folder as the `.blend` file you are using.
+        - Open Blender (if via the command line, watch the output as you go through the steps below to make sure you don't get any fatal errors!).
+        - Navigate to and open your `.blend` file.
 5. Navigate to `File/User Preferences/Add-ons`.
 6. Select the "Object" category.
 7. Find "Object: Gesture Operator" addon and select the checkbox next to it.
