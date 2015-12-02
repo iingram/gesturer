@@ -34,6 +34,9 @@ globalTimeout = None
 # connected to a hardware port (read in from configs)
 serialPort = serial.Serial(None, 9600, timeout = globalTimeout)
 
+# Create a dictionary of values to be written out to CSVs
+csvOutput = {}
+
 # gesture_handler(scene)
 #
 # To be called any time there is a change within the scene (e.g. position change,
@@ -52,6 +55,9 @@ def gesture_handler(scene):
     newAngles = [0] * GestureOperator.numObjects
     shouldResend = False
 
+    # Create the base for the CSV output for each servo (aka each Object)
+    csvOutput[scene.frame_current] = [0] * GestureOperator.numObjects
+
     # Generalized loop for putting an arbitrary number of object parameters out 
     # on the serial connection
     for i in range(GestureOperator.numObjects):
@@ -59,6 +65,9 @@ def gesture_handler(scene):
         movement = degrees(object.rotation_euler[GestureOperator.objectAxes[i]])
         servoAngle = int(GestureOperator.objectOffsets[i] + movement)
         newAngles[i] = servoAngle
+
+        # Set the CSV output for the given servo and angle 
+        csvOutput[scene.frame_current][i] = servoAngle
 
         # If the angle of a motor has changed, rewrite them all to Arduino
         if (servoAngle != GestureOperator.previousServoAngles[i]):
@@ -68,6 +77,7 @@ def gesture_handler(scene):
     # If we should resend the motor positons, loop through and send each based
     # on the motor identification scheme (addressing/switching)
     if (shouldResend == True):
+        print("Scene is: " + str(scene.frame_current))
         for i in range(GestureOperator.numObjects):
             # If we are addressing motors, first send "i"
             if (GestureOperator.motorIdentification == "addressing"):
@@ -191,6 +201,26 @@ def stop_operator():
             myHandlerList.pop(numHandlers - 1 - handlerID)
     serialPort.close()
     GestureOperator.isHandling = False
+
+    print(csvOutput)
+
+    # Write out the CSV animation output to a file
+    fileName = os.path.join(os.path.dirname(bpy.data.filepath), "animationOutput.csv")
+    f = open(fileName, "w")
+    # Is this accessed in order? Probably not
+    for sceneIndex in range(len(csvOutput)):
+        scene = csvOutput[sceneIndex + 1]
+        line = ""
+        for i in range(GestureOperator.numObjects):
+            line += str(scene[i])
+            if i < (GestureOperator.numObjects - 1):
+                line += ", "
+        f.write(line)
+        f.write("\n")
+        #print(line)
+    f.close()
+    print("File Closed")
+
 
 # register()
 #

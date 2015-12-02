@@ -24,8 +24,10 @@ else
 				curl -O http://ftp.halifax.rwth-aachen.de/blender/release/Blender2.76/blender-2.76b-OSX_10.6-x86_64.zip
 			fi
 			echo "Extracting Blender..."
-			zip -d blender-2.76b-OSX_10.6-x86_64.zip "__MACOSX*"
-			tar -xzf blender-2.76b-OSX_10.6-x86_64.zip
+			mkdir blender-2.76b-OSX_10.6-x86_64
+			cd blender-2.76b-OSX_10.6-x86_64
+			tar -xzf ../blender-2.76b-OSX_10.6-x86_64.zip
+			cd ..
 			# echo "Removing Blender download..."
 			# rm blender-2.76b-OSX_10.6-x86_64.zip
 			rm -rf __MACOSX/
