@@ -8,6 +8,7 @@
 import csv
 import os
 import serial
+import struct
 import sys
 import time
 import yaml
@@ -21,11 +22,17 @@ globalTimeout = None
 
 csv1f = open("animationOutput.csv", 'rt')
 reader = csv.reader(csv1f)
-row_count = sum(1 for row in reader)
-csv1Reader = [""] * row_count
+row_count = 0
+csv1Reader = []
+for row in reader:
+    csv1Reader.append(row)
+    row_count += 1
+    print row
 
 
 numFrames = len(csv1Reader)
+
+print(numFrames)
 
 configs = ""
 numObjects = 0
@@ -47,16 +54,20 @@ def frame_handler(scene):
     newAngles = [0] * numObjects
     shouldResend = False
 
+    global previousServoAngles
+
     # Generalized loop for putting an arbitrary number of object parameters out 
     # on the serial connection
     for i in range(numObjects):
         # TODO: Replace this with reading CSV logic to get newAngles correctly
         servoAngle = int(csv1Reader[scene][i])
         newAngles[i] = servoAngle
+        print("Servo " + str(i) + "is: " + str(servoAngle))
 
         # If the angle of a motor has changed, rewrite them all to Arduino
         if (servoAngle != previousServoAngles[i]):
             shouldResend = True
+
             previousServoAngles[i] = newAngles[i]
 
     # If we should resend the motor positons, loop through and send each based
@@ -98,12 +109,21 @@ def main():
     # Read in the YAML configs
     fileName = "gesturerConfigs.yaml"
     fileStream = open(fileName).read()
+    global configs
+    global numObjects
+    global motorIdentification
+    global previousServoAngles
+    global serialPort
     configs = yaml.load(fileStream, Loader=yaml.Loader)
     # Load the YAML configs into global variables for easy access
     numObjects = configs["numObjects"]
     motorIdentification = configs["motorIdentification"]
     previousServoAngles = [0] * numObjects
+    print configs["serialPort"]
     serialPort.port = configs["serialPort"]
+    serialPort.open()
+    #TODO: Add connect time
+    time.sleep(3)
 
 
     frameRate = 24
@@ -113,7 +133,7 @@ def main():
         for i in range(numFrames):
             # Read CSV data and send to Arduino if necessary
             frame_handler(i)
-            print("Frame " + str(i))
+            #print("Frame " + str(i))
             # Sleep to create a frame rate
             time.sleep(sleepTime)
             # TODO: Twitter checks in another thread? Change the CSV to read from,
