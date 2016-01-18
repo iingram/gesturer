@@ -25,6 +25,7 @@ Motor[] motor = new Motor[NUM_MOTORS];
 
 float[] drawAngle = new float[NUM_MOTORS];
 int pMX = -1;
+int countDownToSecondGoing = 0;
 
 void setup() {
     size(180*SFACTOR, 100*SFACTOR);
@@ -84,6 +85,13 @@ void draw() {
     thread("readPipe");
     background(100);
     
+    if(countDownToSecondGoing > 1)
+	countDownToSecondGoing--;
+    else if (countDownToSecondGoing > 0){
+	going[1] = true;
+	countDownToSecondGoing--;
+    }
+
     if (mousePressed == false) {
 	for(int i = 0; i < gestPlayer.length; i++){
 	    if(going[i]){
@@ -166,6 +174,10 @@ void readPipe() {
     else if (level == 2){
 	going[0] = true;
 	going[1] = true;
+    }
+    else if (level == 3){
+	going[0] = true;
+	countDownToSecondGoing = 200;
     }
 }
 
