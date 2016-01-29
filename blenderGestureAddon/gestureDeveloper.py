@@ -63,7 +63,7 @@ def gesture_handler(scene):
     for i in range(GestureOperator.numObjects):
         object = bpy.data.objects[GestureOperator.objectNames[i]]
         movement = degrees(object.rotation_euler[GestureOperator.objectAxes[i]])
-        servoAngle = int(GestureOperator.objectOffsets[i] + movement)
+        servoAngle = int(GestureOperator.objectOffsets[i]) + int(GestureOperator.objectMultipliers[i]) * int(movement)
         newAngles[i] = servoAngle
 
         # Set the CSV output for the given servo and angle 
@@ -125,6 +125,7 @@ class GestureOperator(bpy.types.Operator):
     objectNames = []
     objectAxes = []
     objectOffsets = []
+    objectMultipliers = []
     previousServoAngles = []
     motorIdentification = ""
 
@@ -146,6 +147,7 @@ class GestureOperator(bpy.types.Operator):
             GestureOperator.objectNames = GestureOperator.configs["objectNames"]
             GestureOperator.objectAxes = GestureOperator.configs["objectAxes"]
             GestureOperator.objectOffsets = GestureOperator.configs["objectOffsets"]
+            GestureOperator.objectMultipliers = GestureOperator.configs["objectMultipliers"]
             GestureOperator.numObjects = GestureOperator.configs["numObjects"]
             GestureOperator.motorIdentification = GestureOperator.configs["motorIdentification"]
             GestureOperator.previousServoAngles = [0] * GestureOperator.numObjects
@@ -207,10 +209,14 @@ def stop_operator():
     # Write out the CSV animation output to a file
     fileName = os.path.join(os.path.dirname(bpy.data.filepath), "animationOutput.csv")
     f = open(fileName, "w")
+    zeroOffset = 1
+    if 0 in csvOutput:
+        zeroOffset = 0
     # Is this accessed in order? Probably not
     for sceneIndex in range(len(csvOutput)):
-        scene = csvOutput[sceneIndex + 1]
+        scene = csvOutput[sceneIndex + zeroOffset]
         line = ""
+        line += str(sceneIndex) + ", "
         for i in range(GestureOperator.numObjects):
             line += str(scene[i])
             if i < (GestureOperator.numObjects - 1):
