@@ -7,27 +7,19 @@
 # 	http://arkku.com/misc/arduino_make.sh
 
 objectNames:
-    - Cylinder
-    - Cone
-    - Cylinder
+    - Cube.001
+    - Cube
 objectAxes:
     - 0
-    - 2
-    - 2
-objectOffsets:
-    - 0
-    - 20
-    - 80
-objectMultipliers:
-    - '-1'
-    - '-1'
     - 1
+objectOffsets:
+    - 90
+    - 90
 servoPins:
     - 13
     - 7
-    - 8
-numObjects: 3
-serialPort: /dev/tty.usbmodem1421
+numObjects: 2
+serialPort: /dev/tty.usbmodem1411
 motorIdentification: switching
 
 switchingOffsets:
