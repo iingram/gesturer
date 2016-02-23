@@ -247,7 +247,13 @@ def stop_operator():
 # Registers the GestureOperator class with Blender. Required function. 
 def register():  
     bpy.utils.register_class(GestureOperator) 
-    # Add the button for activating the "Gesture Operator" to the 3d View
+
+# unregister()
+#
+# Unregisters the GestureOperator class with Blender.
+def unregister():  
+    bpy.utils.unregister_class(GestureOperator) 
+
 
 # For testing purposes, so the script will register the class when called directly
 if __name__ == "__main__":  

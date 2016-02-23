@@ -1,11 +1,26 @@
 #!/usr/bin/env python
-# generateSwitchingTemplate.py
+# generateArduino.py
 # Created by Skyler Williams
 #
 # Programatically generate C++ Arduino files using YAML configs options
 
-import yaml
+# Import standard libraries
+import os
+import sys
+import inspect
 
+# Get the path to the current directory so we can add 3rd-party libraries
+currentDirectory = os.path.dirname(os.path.abspath(inspect.getfile(inspect.currentframe())))
+# If we are using Python 3, grab libraries from the Blender addon
+if sys.version_info >= (3, 0):
+    addonLibs = currentDirectory + "/addon-gestureDeveloper/"
+# Otherwise, we are using Python 2, so grab the Python 2 libraries
+else:
+    addonLibs = currentDirectory + "/python2Libs/"
+# Make 3rd party libraries available for import
+sys.path.append(addonLibs)
+# Import 3rd party libraries
+import yaml
 
 
 def generateServoObjects(outputFile, offsetLine, numServos):
@@ -154,13 +169,3 @@ def main():
 
 if __name__ == '__main__':
     main()
-
-
-
-
-
-
-
-
-
-

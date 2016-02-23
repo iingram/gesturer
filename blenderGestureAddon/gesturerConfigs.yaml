@@ -1,35 +1,51 @@
 # Gesturer Configuration Elements
 #
-# NOTE: Look into compiling/uploading desired Arduino code (generated dynamically 
-#	from configs to have Addressed/Switching, correct number of motors, etc.) to
-# 	the board when we first run the addon in Blender. Relevant links below.
-#	http://forum.arduino.cc/index.php?topic=46588.0
-# 	http://arkku.com/misc/arduino_make.sh
 
+# Object Information
+#
+# NOTE: Each object index value denotes on specific individual servo. That is,
+# all of the values in the first position of each list apply to the same
+# distinct servo, all of the values in the second position of each list
+# apply to the same distinct servo, etc. 
+
+# Total number of Blender objects/Arduino servos in use
+numObjects: 2
+# Name of each object to extract rotation information from and transmit to servos.
 objectNames:
-    - Cylinder
-    - Cone
-    - Cylinder
+    - Cube.001
+    - Cube
+# Axis of rotation to be extracted from each Blender object
 objectAxes:
     - 0
-    - 2
-    - 2
-objectOffsets:
-    - 0
-    - 20
-    - 80
-objectMultipliers:
-    - '-1'
-    - '-1'
     - 1
+# Multiplier applied directly to the axis movement values from Blender before
+# the objectOffsets are added to get the final servo angle value.
+objectMultipliers:
+    - '1'
+    - '1'
+# Values added to the movement values from Blender (after the multiplier is applied)
+objectOffsets:
+    - 90
+    - 90
+# Pin each individual servo is connected to on the Arduino
 servoPins:
     - 13
     - 7
-    - 8
-numObjects: 3
-serialPort: /dev/tty.usbmodem1421
+
+# Arduino information
+# 
+
+# Port to connect to the Arduino with via USB
+serialPort: /dev/tty.usbmodem1431
+
+
+# All following information is used for Arduino code generation and may be 
+# ignored by the user.
+
+# Motor identifcation schema for Arduino code generation
 motorIdentification: switching
 
+# Offsets for insertion locations of code within automatic generation
 switchingOffsets:
     2: servoObjects  
     3: numServos  
@@ -38,7 +54,7 @@ switchingOffsets:
     24: exceedsUpperBound  
     26: servoSwitch 
     27: currentServoIncrement 
-
+# Offsets for insertion locations of code within automatic generation
 addressingOffsets:
     2: servoObjects  
     3: numServos  
