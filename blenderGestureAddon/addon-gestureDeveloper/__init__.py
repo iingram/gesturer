@@ -64,62 +64,72 @@ def gesture_handler(scene):
     #       - Addressing scheme for motors
     #       - Serial port to connect through
 
-    # Create an array to store the angles we get from the Blender scene, and a
-    # bool to see if we should send these values to the Arduino
-    newAngles = [0] * GestureOperator.numObjects
-    shouldResend = False
+    find_current_gesture(scene.frame_current)
 
-    # Create the base for the CSV output for each servo (aka each Object)
-    csvOutput[scene.frame_current] = [0] * GestureOperator.numObjects
+    # Only handle the scene if it is within a gesture
+    if GestureOperator.currentGesture != -1:
+        # Create an array to store the angles we get from the Blender scene, and a
+        # bool to see if we should send these values to the Arduino
+        newAngles = [0] * GestureOperator.numObjects
+        shouldResend = False
 
-    # Generalized loop for putting an arbitrary number of object parameters out 
-    # on the serial connection
-    for i in range(GestureOperator.numObjects):
-        object = bpy.data.objects[GestureOperator.objectNames[i]]
-        movement = degrees(object.rotation_euler[GestureOperator.objectAxes[i]])
-        servoAngle = int(GestureOperator.objectOffsets[i]) + int(GestureOperator.objectMultipliers[i]) * int(movement)
-        newAngles[i] = servoAngle
+        # Create the base for the CSV output for each servo (aka each Object)
+        # Will exist even for frames with no gesture, to make indexing into
+        # the CSV from the YAML start/end values easier
+        csvOutput[scene.frame_current] = [0] * GestureOperator.numObjects
 
-        # Set the CSV output for the given servo and angle 
-        csvOutput[scene.frame_current][i] = servoAngle
-
-        # If the angle of a motor has changed, rewrite them all to Arduino
-        if (servoAngle != GestureOperator.previousServoAngles[i]):
-            shouldResend = True
-            GestureOperator.previousServoAngles[i] = newAngles[i]
-
-    # If we should resend the motor positons, loop through and send each based
-    # on the motor identification scheme (addressing/switching)
-    if (shouldResend == True):
-        print("Scene is: " + str(scene.frame_current))
+        # Generalized loop for putting an arbitrary number of object parameters out 
+        # on the serial connection
         for i in range(GestureOperator.numObjects):
-            # If we are addressing motors, first send "i"
-            if (GestureOperator.motorIdentification == "addressing"):
-                serialPort.write(struct.pack('B', (181 + i)))
+            object = bpy.data.objects[GestureOperator.objectNames[i]]
+            movement = degrees(object.rotation_euler[GestureOperator.objectAxes[i]])
+            servoAngle = int(GestureOperator.objectOffsets[i]) + int(GestureOperator.objectMultipliers[i]) * int(movement)
+            newAngles[i] = servoAngle
+
+            # Set the CSV output for the given servo and angle 
+            csvOutput[scene.frame_current][i] = servoAngle
+
+            # If the angle of a motor has changed, rewrite them all to Arduino
+            if (servoAngle != GestureOperator.previousServoAngles[i]):
+                shouldResend = True
+                GestureOperator.previousServoAngles[i] = newAngles[i]
+
+        # If we should resend the motor positons, loop through and send each based
+        # on the motor identification scheme (addressing/switching)
+        if (shouldResend == True):
+            print("Scene is: " + str(scene.frame_current))
+            for i in range(GestureOperator.numObjects):
+                # If we are addressing motors, first send "i"
+                if (GestureOperator.motorIdentification == "addressing"):
+                    serialPort.write(struct.pack('B', (181 + i)))
+                    serialRead = serialPort.read()
+                    # NOTE:
+                    # Need to check if it's a chr or "string of length 0" before
+                    # we print to stop getting that error and to see what's going on
+                    print("Address is: " + str(ord(serialRead)))
+                    if (ord(serialRead) != (181 + i)):
+                        stop_operator()
+                        print("Serial send not equal to serial return")
+                        break
+
+                serialPort.write(struct.pack('B', newAngles[i]))
+                # GestureOperator.previousServoAngles[i] = newAngles[i]
+                print("Write angle " + str(i) + " is: " + str(newAngles[i]))
+
                 serialRead = serialPort.read()
                 # NOTE:
                 # Need to check if it's a chr or "string of length 0" before
                 # we print to stop getting that error and to see what's going on
-                print("Address is: " + str(ord(serialRead)))
-                if (ord(serialRead) != (181 + i)):
+                print("Read angle " + str(i) + " is: " + str(ord(serialRead)))
+                if (ord(serialRead) != newAngles[i]):
                     stop_operator()
                     print("Serial send not equal to serial return")
                     break
+            shouldResend = False
+    # If we are not within a gesture, tell the user
+    else:
+        print("Frame " + str(scene.frame_current) + " is not within a gesture")
 
-            serialPort.write(struct.pack('B', newAngles[i]))
-            # GestureOperator.previousServoAngles[i] = newAngles[i]
-            print("Write angle " + str(i) + " is: " + str(newAngles[i]))
-
-            serialRead = serialPort.read()
-            # NOTE:
-            # Need to check if it's a chr or "string of length 0" before
-            # we print to stop getting that error and to see what's going on
-            print("Read angle " + str(i) + " is: " + str(ord(serialRead)))
-            if (ord(serialRead) != newAngles[i]):
-                stop_operator()
-                print("Serial send not equal to serial return")
-                break
-        shouldResend = False
    
 
 # GestureOperator class
@@ -142,6 +152,14 @@ class GestureOperator(bpy.types.Operator):
     objectMultipliers = []
     previousServoAngles = []
     motorIdentification = ""
+    numGestures = 0
+    startingFrame = []
+    endingFrame = []
+    csvOutputName = ""
+    shouldOutputCSV = False
+    gestureDelimiter = ""
+
+    currentGesture = -1
 
     # Boolean to see if the scene handler should be set or reset
     isHandling = False
@@ -158,12 +176,22 @@ class GestureOperator(bpy.types.Operator):
             fileStream = open(fileName).read()
             GestureOperator.configs = yaml.load(fileStream, Loader=yaml.Loader)
 
+            # TODO: Put all of this within a try catch and catch KeyErrors for 
+            # improperly constructed YAML files
             GestureOperator.objectNames = GestureOperator.configs["objectNames"]
             GestureOperator.objectAxes = GestureOperator.configs["objectAxes"]
             GestureOperator.objectOffsets = GestureOperator.configs["objectOffsets"]
             GestureOperator.objectMultipliers = GestureOperator.configs["objectMultipliers"]
             GestureOperator.numObjects = GestureOperator.configs["numObjects"]
             GestureOperator.motorIdentification = GestureOperator.configs["motorIdentification"]
+            GestureOperator.numGestures = GestureOperator.configs["numGestures"]
+            if "startingFrame" in GestureOperator.configs:
+                GestureOperator.startingFrame = GestureOperator.configs["startingFrame"]
+            if "endingFrame" in GestureOperator.configs:
+                GestureOperator.endingFrame = GestureOperator.configs["endingFrame"]
+            GestureOperator.csvOutputName = GestureOperator.configs["csvOutputName"]
+            GestureOperator.shouldOutputCSV = GestureOperator.configs["shouldOutputCSV"]
+            GestureOperator.gestureDelimiter = GestureOperator.configs["gestureDelimiter"]
             GestureOperator.previousServoAngles = [0] * GestureOperator.numObjects
             serialPort.port = GestureOperator.configs["serialPort"]
             # Currently, only load the configs when the "Gesture Operator" 
@@ -205,6 +233,20 @@ def non_blocking_read():
     return None
 
 
+
+def find_current_gesture(currentFrame):
+    
+    # Reset currentGesture to -1, will remain so if currentFrame is not within
+    # a gesture
+    currentGesture = -1
+    # Check to see if the currentFrame is within any of the gestures' windows,
+    # and set the currentGesture if so
+    for i in range(numGestures):
+        if currentFrame >= GestureOperator.startingFrame[i] and currentFrame <= GestureOperator.endingFrame[i]:
+            GestureOperator.currentGesture = i
+            break
+
+
 # stop_operator()
 #
 # Stops the function of the addon by removing the scene handler we added to 
@@ -218,28 +260,53 @@ def stop_operator():
     serialPort.close()
     GestureOperator.isHandling = False
 
-    print(csvOutput)
+    # Tell the addon to reload the configs when it next executes
+    GestureOperator.loadConfigs = True
 
     # Write out the CSV animation output to a file
-    fileName = os.path.join(os.path.dirname(bpy.data.filepath), "animationOutput.csv")
-    f = open(fileName, "w")
-    zeroOffset = 1
-    if 0 in csvOutput:
-        zeroOffset = 0
-    # Is this accessed in order? Probably not
-    for sceneIndex in range(len(csvOutput)):
-        scene = csvOutput[sceneIndex + zeroOffset]
-        line = ""
-        line += str(sceneIndex) + ", "
-        for i in range(GestureOperator.numObjects):
-            line += str(scene[i])
-            if i < (GestureOperator.numObjects - 1):
-                line += ", "
-        f.write(line)
-        f.write("\n")
-        #print(line)
-    f.close()
-    print("File Closed")
+    if GestureOperator.shouldOutputCSV == True:
+        # TODO: Write out animation output for each individual gesture into the same
+        # file with delimiters (?). DONE
+        # TODO: Access the gesture data in csvOutput based on the bounds in the YAML. DONE
+        # TODO: Translate all gesture data to starting at 0 while outputting. DONE
+        outputFilePath = os.path.join(os.path.dirname(bpy.data.filepath), "animationOutput.csv")
+        outputFile = open(outputFilePath, "w")
+
+        for gesture in range(GestureOperator.numGestures):
+            # Get scene information for the current gesture
+            gestureStart = GestureOperator.startingFrame[gesture]
+            gestureEnd = GestureOperator.endingFrame[gesture]
+            gestureLength = gestureEnd - gestureStart
+            # Translate each gesture so it starts at 0
+            offsetIndex = 0
+
+            # Range is not inclusive, so we loop over the start to end+1
+            for sceneIndex in range(gestureStart, (gestureEnd + 1)):
+                scene = csvOutput[sceneIndex]
+                line = ""
+                line += str(offsetIndex) + ", "
+
+                # Write out the position of each object into columns of the CSV
+                for i in range(GestureOperator.numObjects):
+                    line += str(scene[i])
+                    if i < (GestureOperator.numObjects - 1):
+                        line += ", "
+
+                line += "\n"
+                outputFile.write(line)
+
+                offsetIndex += 1
+
+            # Delimit each gesture with the proper character
+            line = GestureOperator.gestureDelimiter
+            line += "\n"
+            outputFile.write(line)
+
+        outputFile.close()
+        print("File Closed")
+
+    # Reset the CSV dictionary
+    csvOutput = {}
 
 
 # register()
