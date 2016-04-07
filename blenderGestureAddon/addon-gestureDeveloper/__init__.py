@@ -48,8 +48,7 @@ globalTimeout = None
 # connected to a hardware port (read in from configs)
 serialPort = serial.Serial(None, 9600, timeout = globalTimeout)
 
-# Create a dictionary of values to be written out to CSVs
-csvOutput = {}
+
 
 # gesture_handler(scene)
 #
@@ -63,6 +62,7 @@ def gesture_handler(scene):
     #       - Offset for the angle of each motor
     #       - Addressing scheme for motors
     #       - Serial port to connect through
+    global csvOutput
 
     find_current_gesture(scene.frame_current)
 
@@ -76,7 +76,7 @@ def gesture_handler(scene):
         # Create the base for the CSV output for each servo (aka each Object)
         # Will exist even for frames with no gesture, to make indexing into
         # the CSV from the YAML start/end values easier
-        csvOutput[scene.frame_current] = [0] * GestureOperator.numObjects
+        GestureOperator.csvOutput[scene.frame_current] = [0] * GestureOperator.numObjects
 
         # Generalized loop for putting an arbitrary number of object parameters out 
         # on the serial connection
@@ -87,7 +87,7 @@ def gesture_handler(scene):
             newAngles[i] = servoAngle
 
             # Set the CSV output for the given servo and angle 
-            csvOutput[scene.frame_current][i] = servoAngle
+            GestureOperator.csvOutput[scene.frame_current][i] = servoAngle
 
             # If the angle of a motor has changed, rewrite them all to Arduino
             if (servoAngle != GestureOperator.previousServoAngles[i]):
@@ -153,11 +153,12 @@ class GestureOperator(bpy.types.Operator):
     previousServoAngles = []
     motorIdentification = ""
     numGestures = 0
-    startingFrame = []
-    endingFrame = []
+    gestureFrames = [] 
     csvOutputName = ""
     shouldOutputCSV = False
     gestureDelimiter = ""
+    # Create a dictionary of values to be written out to CSVs
+    csvOutput = {}
 
     currentGesture = -1
 
@@ -185,10 +186,7 @@ class GestureOperator(bpy.types.Operator):
             GestureOperator.numObjects = GestureOperator.configs["numObjects"]
             GestureOperator.motorIdentification = GestureOperator.configs["motorIdentification"]
             GestureOperator.numGestures = GestureOperator.configs["numGestures"]
-            if "startingFrame" in GestureOperator.configs:
-                GestureOperator.startingFrame = GestureOperator.configs["startingFrame"]
-            if "endingFrame" in GestureOperator.configs:
-                GestureOperator.endingFrame = GestureOperator.configs["endingFrame"]
+            GestureOperator.gestureFrames = GestureOperator.configs["gestureFrames"]
             GestureOperator.csvOutputName = GestureOperator.configs["csvOutputName"]
             GestureOperator.shouldOutputCSV = GestureOperator.configs["shouldOutputCSV"]
             GestureOperator.gestureDelimiter = GestureOperator.configs["gestureDelimiter"]
@@ -238,11 +236,14 @@ def find_current_gesture(currentFrame):
     
     # Reset currentGesture to -1, will remain so if currentFrame is not within
     # a gesture
-    currentGesture = -1
+    # currentGesture = -1
+
     # Check to see if the currentFrame is within any of the gestures' windows,
     # and set the currentGesture if so
-    for i in range(numGestures):
-        if currentFrame >= GestureOperator.startingFrame[i] and currentFrame <= GestureOperator.endingFrame[i]:
+    for i in range(GestureOperator.numGestures):
+        # Note, gestureFrames[i][0] is the startingFrame of gesture i and
+        # gestureFrames[i][1] is the endingFrame of gesture i
+        if currentFrame >= GestureOperator.gestureFrames[i][0] and currentFrame <= GestureOperator.gestureFrames[i][1]:
             GestureOperator.currentGesture = i
             break
 
@@ -252,6 +253,9 @@ def find_current_gesture(currentFrame):
 # Stops the function of the addon by removing the scene handler we added to 
 # capture and send object positions, and by closing the serial port. 
 def stop_operator():
+
+    print(GestureOperator.csvOutput)
+
     myHandlerList = bpy.app.handlers.scene_update_pre
     numHandlers = len(myHandlerList)
     for handlerID, function in enumerate(reversed(myHandlerList)):
@@ -274,15 +278,15 @@ def stop_operator():
 
         for gesture in range(GestureOperator.numGestures):
             # Get scene information for the current gesture
-            gestureStart = GestureOperator.startingFrame[gesture]
-            gestureEnd = GestureOperator.endingFrame[gesture]
-            gestureLength = gestureEnd - gestureStart
+            gestureStart = GestureOperator.gestureFrames[gesture][0]
+            gestureEnd = GestureOperator.gestureFrames[gesture][1]
+            gestureLength = int(gestureEnd) - int(gestureStart)
             # Translate each gesture so it starts at 0
             offsetIndex = 0
 
             # Range is not inclusive, so we loop over the start to end+1
             for sceneIndex in range(gestureStart, (gestureEnd + 1)):
-                scene = csvOutput[sceneIndex]
+                scene = GestureOperator.csvOutput[sceneIndex]
                 line = ""
                 line += str(offsetIndex) + ", "
 
@@ -306,7 +310,7 @@ def stop_operator():
         print("File Closed")
 
     # Reset the CSV dictionary
-    csvOutput = {}
+    GestureOperator.csvOutput = {}
 
 
 # register()

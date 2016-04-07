@@ -36,14 +36,14 @@ servoPins:
 #
 # Total number of Gestures in use
 numGestures: 2
-# Starting frame number of each gesture
-startingFrame:
-    - 0
-    - 128
-# Ending frame number of each gesture
-endingFrame:
-    -120
-    -244
+# Starting and ending frame number of each gesture
+gestureFrames:
+    - 
+        - 0
+        - 120
+    -
+        - 128
+        - 244
 
 # Output Information
 #
