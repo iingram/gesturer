@@ -53,7 +53,7 @@ csvOutputName: animationOutput.csv
 # output file already exists in the directory it will be overwritten
 shouldOutputCSV: False
 # Character to delimit between gestures in the CSV
-gestureDelimeter: *
+gestureDelimiter: "*"
 
 # Arduino information
 # 
