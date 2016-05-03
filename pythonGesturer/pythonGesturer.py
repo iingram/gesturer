@@ -6,6 +6,7 @@
 # 
 
 import csv
+import pygame
 import serial
 import struct
 import sys
@@ -13,22 +14,49 @@ import time
 import yaml
 
 
+###################### Implementation Specific Definitions #####################
+frameCounter = 0
+
+################################################################################
+
 # Global Variables
+
 previousServoAngles = []
-# Create a PySerial port with infinite timeout (blocks on reads), but not yet
-# connected to a hardware port (read in from configs)
-serialPort = serial.Serial(None, 9600, timeout = globalTimeout)
+
 # Create a global timeout variable, so we can reset the timeout after performing
 # a non-blocking read
 globalTimeout = None
 
-# Write an example updateGesture() to change the currentGesture value based on
-# desired logic
-def updateGesture():
-    print "Unwritten, but shall update currentGesture based on user desired logic"
+# Create a PySerial port with infinite timeout (blocks on reads), but not yet
+# connected to a hardware port (read in from configs)
+serialPort = serial.Serial(None, 9600, timeout = globalTimeout)
+
+
+
+###################### Implementation Specific Functions #######################
+
+# Simple example of changing the newGesture to a constant value
+def updateGesture(frame, csvGestureData, csvGestureLength):
+    global newGesture
+    global frameCounter
+
+    nextGesture = 0
+    changeGestureFrame = 100
+
+    # Example of changing the newGesture
+    if frameCounter == changeGestureFrame:
+        frameCounter = 0
+        newGesture = nextGesture
+
+################################################################################
+
+
+
 
 
 def gestureSmooth(sleepTime, numObjects, startPosArray, endPosArray):
+    print("Smoothing between gestures...")
+
     # Right now position arrays start as strings, so convert them to integers
     startPosArray = map(int, startPosArray)
     endPosArray = map(int, endPosArray)
@@ -47,8 +75,13 @@ def gestureSmooth(sleepTime, numObjects, startPosArray, endPosArray):
     for i in range(numObjects):
         servoValues[i] = startPosArray[i + 1]
 
+    startTime = time.time()
+    endTime = time.time()
+
     # Linear smoothing over the range of the longest distance
     for i in range(maxDelta):
+        startTime = time.time()
+
         # For each object
         for i in range(numObjects):
             # Linearly increment/decrement the servo value towards the end 
@@ -60,13 +93,23 @@ def gestureSmooth(sleepTime, numObjects, startPosArray, endPosArray):
             # Otherwise, the servo value is the end position value, and that 
             # servo stops animating
 
-            print("Servo value is: " + str(servoValues[i]))
+            # print("Servo value is: " + str(servoValues[i]))
             # Write out the servo value to the Arduino and read back the return
             serialPort.write(struct.pack('B', servoValues[i]))
             serialRead = serialPort.read()
 
-        # Sleep to create a frame rate
-        time.sleep(sleepTime)       
+        endTime = time.time()
+        timeDifference = endTime - startTime
+
+        # If rendering the frame on the robot took less time than the sleep
+        # time, subtract the timeDifference from the sleepTime and sleep 
+        # that amount to create the proper frame rate
+        if 0 < timeDifference and timeDifference < sleepTime:
+            time.sleep(sleepTime - timeDifference)
+        else:
+            print("Execution time exceeded the frame rate...")
+        # Otherwise, we do not want to sleep as we have already spent more
+        # time than the frame rate   
 
 
 
@@ -158,7 +201,13 @@ def main():
     csvInputFile = open(csvOutputName, 'rt')
     reader = csv.reader(csvInputFile)
     row_count = 0
-    csvGestureData = [[]] * numGestures
+    # Will be a list of gesture number lists, each containing a list of the 
+    # positions for each motor at each frame of the gesture
+    csvGestureData = []
+    for gesture in range(numGestures):
+        # Append a new list for each gesture, if we multiply an empty list it is
+        # three references to the same list!
+        csvGestureData.append([])
     csvGestureLength = [0] * numGestures
 
     # TODO: For each gesture, create a new entry in csvGestureData and populate
@@ -195,37 +244,78 @@ def main():
     # to correspond with how the gesture was generated (in Blender or otherwise)
     frameRate = 24
     sleepTime = 1./frameRate
+    # absoluteSleepTime = 1./frameRate
 
     # Main loop for executing gestures/the logic for switching between them
     # TODO: Add modular logic for switching between gestures. MOSTLY DONE (just 
     # need to write an example updateGesture())
+    
+    startTime = time.time()
+    endTime = time.time()
+
+
     while True:
 
+        
         for currentFrame in range(numFrames):
+
+            startTime = time.time()
+
             # Read CSV data and send to Arduino if necessary
             frame_handler(currentFrame, numObjects, csvGestureData[currentGesture],  motorIdentification)
             # Sleep to create a frame rate
-            time.sleep(sleepTime)
-            
+            # endTime = time.time()
+            # timeDifference = endTime - startTime
+            # print(endTime - startTime)
+            # if timeDifference < absoluteSleepTime:
+            #     sleepTime = absoluteSleepTime - timeDifference
+            # else:
+            #     sleepTime = absoluteSleepTime
+            # print(sleepTime)
+
             # LOGIC FOR SWITCHING "currentGesture" GOES HERE
+            updateGesture(currentFrame, csvGestureData, csvGestureLength)
 
-            # newGesture = updateGesture()
+            if currentGesture != newGesture:
+                print("Switching Gestures...")
+                print("currentGesture is: " + str(currentGesture))
+                print("newGesture is: " + str(newGesture))
+                startPosArray = [0] * numObjects
+                endPosArray = [0] * numObjects
+                oldGesture = currentGesture
+                currentGesture = newGesture
 
-            # startPosArray = [0] * numObjects
-            # endPosArray = [0] * numObjects
-            # oldGesture = currentGesture
-            # currentGesture = newGesture
-            # startPosArray = csvGestureData[oldGesture][currentFrame]
-            # endPosArray = csvGestureData[currentGesture][0]
-            # numFrames = csvGestureLength[currentGesture]
+                startPosArray = csvGestureData[oldGesture][currentFrame]
+                endPosArray = csvGestureData[currentGesture][0]
+                numFrames = csvGestureLength[currentGesture]
 
-            # Note, if you want linear smoothing between gestures, create arrays 
-            # containing the start and end positions of each object and uncomment
-            # the following line
-            # gestureSmooth(sleepTime, numObjects, startPosArray, endPosArray)
+                # Note, if you want linear smoothing between gestures, create arrays 
+                # containing the start and end positions of each object and uncomment
+                # the following line
+                gestureSmooth(sleepTime/2, numObjects, startPosArray, endPosArray)
 
-            # BE SURE TO "break" AT THE END OF THE SWITCHING GESTURES LOGIC
-            # break
+                # BE SURE TO "break" AT THE END OF THE SWITCHING GESTURES LOGIC
+                break
+
+            endTime = time.time()
+
+            timeDifference = endTime - startTime
+            # print(timeDifference)
+
+            # If rendering the frame on the robot took less time than the sleep
+            # time, subtract the timeDifference from the sleepTime and sleep 
+            # that amount to create the proper frame rate
+            if 0 < timeDifference and timeDifference < sleepTime:
+                time.sleep(sleepTime - timeDifference)
+            else:
+                print("Execution time exceeded the frame rate...")
+            # Otherwise, we do not want to sleep as we have already spent more
+            # time than the frame rate
+
+            # startTime = time.time()
+            
+
+            
 
 
 if __name__ == "__main__":  
