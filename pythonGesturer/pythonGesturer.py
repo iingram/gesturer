@@ -21,7 +21,14 @@ frameCounter = 0
 
 # Global Variables
 
+# Array to store previous servo angles, so we know when to send new values to
+# the servos
 previousServoAngles = []
+
+# Value to represent the new gesture to be performed, when this value is 
+# changed in updateGesture() the program smooths between the current gesture
+# and this new gesture
+newGesture = 0
 
 # Create a global timeout variable, so we can reset the timeout after performing
 # a non-blocking read
