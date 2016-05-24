@@ -41,4 +41,4 @@ Usage
         - Open Blender (if via the command line, watch the output as you go through the steps below to make sure you don't get any fatal errors!).
         - Navigate to and open your `.blend` file.
 5. To activate the addon, press the spacebar while in Blender to bring up the search interface, type "Gesture Operator", and select the result.
-6. To deactivate the addon once it is running, follow the same process from step 5.
+6. To deactivate the addon once it is running, follow the same process from step 5. If set in the YAML configs, deactivating the addon will output a CSV file containing the animated gestures. Make sure to run through the entire window of each gesture in Blender or you will get an error.
