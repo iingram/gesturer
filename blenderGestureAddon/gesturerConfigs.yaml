@@ -31,6 +31,14 @@ objectOffsets:
 servoPins:
     - 13
     - 7
+# Min and max limits for servo values
+gestureLimits:
+    -
+        - 0
+        - 180
+    -
+        - 0
+        - 180
 
 # Gesture Information
 #
