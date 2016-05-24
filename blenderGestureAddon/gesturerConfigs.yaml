@@ -32,7 +32,7 @@ servoPins:
     - 13
     - 7
 # Min and max limits for servo values
-gestureLimits:
+servoLimits:
     -
         - 0
         - 180
