@@ -28,6 +28,9 @@ objectOffsets:
     - 90
     - 90
 # Pin each individual servo is connected to on the Arduino
+# As of now: must re-run generateArduino.py and download new code
+# to Arduino for changes to have effect
+# (i.e. Blender Addon doesn't see this)
 servoPins:
     - 13
     - 7
