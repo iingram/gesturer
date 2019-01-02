@@ -84,6 +84,11 @@ def gesture_handler(scene):
             object = bpy.data.objects[GestureOperator.objectNames[i]]
             movement = degrees(object.rotation_euler[GestureOperator.objectAxes[i]])
             servoAngle = int(GestureOperator.objectOffsets[i]) + int(GestureOperator.objectMultipliers[i]) * int(movement)
+            if servoAngle <= 1:
+                servoAngle = 1
+            if servoAngle >= 179:
+                servoAngle = 179
+
             newAngles[i] = servoAngle
 
             # Set the CSV output for the given servo and angle 
@@ -203,7 +208,7 @@ class GestureOperator(bpy.types.Operator):
             #   we know it's open to add our handler to the scene update. Need to
             #   find a better way than hardcoding a sleep value, but it works for now 
             serialPort.open()
-            print("Opening Serial port, waiting for 2 seconds to connect...")
+            print("Opening the serial port, waiting for 2 seconds to connect...")
             sleep(2)
             bpy.app.handlers.scene_update_pre.append(gesture_handler)
             GestureOperator.isHandling = True
