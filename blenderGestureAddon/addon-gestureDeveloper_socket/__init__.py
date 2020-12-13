@@ -14,13 +14,13 @@ from threading import Thread
 import yaml
 import bpy
 
-NUM_SERVOS = 3
+NUM_SERVOS = 6
 servo_angles = [0] * NUM_SERVOS
 
 
 class RobotSocketHandler(Thread):
 
-    def __init__(self, NUM_SERVOS, servo_angles):
+    def __init__(self, NUM_SERVOS, server_deets, servo_angles):
         super().__init__()
 
         self.servo_angles = servo_angles
@@ -28,7 +28,7 @@ class RobotSocketHandler(Thread):
         self.sig = 'I' * NUM_SERVOS
 
         sock = socket.socket()
-        sock.connect(('192.168.1.62', 65432))
+        sock.connect(server_deets)
         self.stream = sock.makefile('wb')
 
     def run(self):
@@ -195,6 +195,9 @@ class GestureOperator(bpy.types.Operator):
 
             # TODO: Put all of this within a try catch and catch KeyErrors for 
             # improperly constructed YAML files
+            GestureOperator.ip = GestureOperator.configs["robot_ip"]
+            GestureOperator.port = int(GestureOperator.configs["robot_port"])
+
             GestureOperator.objectNames = GestureOperator.configs["objectNames"]
             GestureOperator.objectAxes = GestureOperator.configs["objectAxes"]
             GestureOperator.objectOffsets = GestureOperator.configs["objectOffsets"]
@@ -220,7 +223,10 @@ class GestureOperator(bpy.types.Operator):
 
             print('Opening socket to robot.')
             print('starting servo socket handler')
-            servo_command_handler = RobotSocketHandler(NUM_SERVOS, servo_angles)
+            servo_command_handler = RobotSocketHandler(NUM_SERVOS,
+                                                       (GestureOperator.ip,
+                                                        GestureOperator.port),
+                                                       servo_angles)
             servo_command_handler.start()
 
             # time.sleep(1)
