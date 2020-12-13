@@ -41,34 +41,19 @@ CSV_ANIMATION_FILENAME = configs["csvOutputName"]
 servo_angles = [0] * NUM_SERVOS
 
 # Value to represent the new gesture to be performed, when this value is 
-# changed in updateGesture() the program smooths between the current gesture
+# changed in update_gesture() the program smooths between the current gesture
 # and this new gesture
-new_gesture = 0
 
-# def updateGesture(frame, csv_gesture_data, csvGestureLength):
-#     global new_gesture
-#     global frameCounter
-
-#     next_gesture = 0
-#     changeGestureFrame = 100
-
-#     # Example of changing the new_gesture
-#     if frameCounter == changeGestureFrame:
-#         frameCounter = 0
-#         new_gesture = next_gesture
-
-frameCounter = 0
-def updateGesture(frame, csv_gesture_data, csvGestureLength):
-    global new_gesture
-    global frameCounter
-
-    next_gesture = 0
-    changeGestureFrame = 100
-
-    # Example of changing the new_gesture
-    if frameCounter == changeGestureFrame:
-        frameCounter = 0
-        new_gesture = next_gesture
+# def update_gesture(frame, csv_gesture_data, csv_gesture_length):
+def update_gesture(current_frame, current_gesture, num_frames_in_gesture):
+    if current_frame >= num_frames_in_gesture - 1:
+        new_gesture = current_gesture + 1
+        if new_gesture >= NUM_GESTURES:
+            new_gesture = 0
+    else:
+        new_gesture = current_gesture
+            
+    return new_gesture
 
 
 class ServoCommandHandler(Thread):
@@ -114,11 +99,6 @@ def frame_handler(current_frame, gesture_positions):
 
 def main():
     
-    # previous_servo_angles = [0] * NUM_SERVOS
-
-    current_gesture = 0
-    switchCount = 0
-
     servo_command_handler = ServoCommandHandler(NUM_SERVOS, servo_angles)
     servo_command_handler.start()
 
@@ -132,7 +112,7 @@ def main():
         for gesture in range(NUM_GESTURES):
             # Append a list for each gesture
             csv_gesture_data.append([])
-        csvGestureLength = [0] * NUM_GESTURES
+        csv_gesture_length = [0] * NUM_GESTURES
 
         gestureCount = 0
         # Read through the CSV file and populate the gesture data/length arrays 
@@ -140,7 +120,7 @@ def main():
             # If the first item in the CSV row is a "*", we have
             # reached the end of a gesture
             if row[0] == "*":
-                csvGestureLength[gestureCount] = len(csv_gesture_data[gestureCount])
+                csv_gesture_length[gestureCount] = len(csv_gesture_data[gestureCount])
                 gestureCount += 1
             # Otherwise, continue adding to the current gesture
             else:
@@ -149,64 +129,61 @@ def main():
         # In case there was no "*" at the end of the last gesture, we set the last 
         # gesture length
         if gestureCount == (NUM_GESTURES - 1):
-            csvGestureLength[gestureCount] = len(csv_gesture_data[gestureCount])
+            csv_gesture_length[gestureCount] = len(csv_gesture_data[gestureCount])
 
+    # # Set frame rate and corresponding sleep rate
+    # frameRate = 24
+    # sleepTime = 1./frameRate
+    # start_time = time.time()
+
+    current_gesture = 0
     # Start the number of frames as the length of the current_gesture
-    num_frames = csvGestureLength[current_gesture]
-
-    # Set frame rate and corresponding sleep rate
-    frameRate = 24
-    sleepTime = 1./frameRate
-
-    startTime = time.time()
-    endTime = time.time()
+    num_frames_in_gesture = csv_gesture_length[current_gesture]
 
     while True:
-        for current_frame in range(num_frames):
-            # startTime = time.time()
-
-            # Read CSV data and send over socket if necessary
-            print(servo_angles)
+        for current_frame in range(num_frames_in_gesture):
             frame_handler(current_frame,
                           csv_gesture_data[current_gesture])
+
+            print('{}: {}: {}'.format(current_gesture,
+                                      current_frame,
+                                      servo_angles))
             time.sleep(.03)
-
+            
             # LOGIC FOR SWITCHING "current_gesture" GOES HERE
-            # updateGesture(current_frame, csv_gesture_data, csvGestureLength)
-
+            # update_gesture(current_frame, csv_gesture_data, csv_gesture_length)
+            new_gesture = update_gesture(current_frame,
+                                         current_gesture,
+                                         num_frames_in_gesture)
+            
             # mechanics for switching gesture if necessary
-            # if current_gesture != new_gesture:
-            #     print("Switching Gestures...")
-            #     print("current_gesture is: " + str(current_gesture))
-            #     print("new_gesture is: " + str(new_gesture))
-            #     # startPosArray = [0] * NUM_SERVOS
-            #     # endPosArray = [0] * NUM_SERVOS
-            #     oldGesture = current_gesture
-            #     current_gesture = new_gesture
+            if current_gesture != new_gesture:
+                print("Switching Gestures...")
+                print("current_gesture is: " + str(current_gesture))
+                print("new_gesture is: " + str(new_gesture))
+                # startPosArray = [0] * NUM_SERVOS
+                # endPosArray = [0] * NUM_SERVOS
+                # oldGesture = current_gesture
+                current_gesture = new_gesture
+                # startPosArray = csv_gesture_data[oldGesture][current_frame]
+                # endPosArray = csv_gesture_data[current_gesture][0]
+                num_frames_in_gesture = csv_gesture_length[current_gesture]
 
-            #     # startPosArray = csv_gesture_data[oldGesture][current_frame]
-            #     # endPosArray = csv_gesture_data[current_gesture][0]
-            #     num_frames = csvGestureLength[current_gesture]
+                # BE SURE TO "break" AT THE END OF THE SWITCHING GESTURES LOGIC
+                break
 
-            #     # BE SURE TO "break" AT THE END OF THE SWITCHING GESTURES LOGIC
-            #     break
-
-            # endTime = time.time()
-
-            # timeDifference = endTime - startTime
-
-            # If rendering the frame on the robot took less time than
-            # the sleep time, subtract the timeDifference from the
-            # sleepTime and sleep that amount to create the proper
-            # frame rate
-            # time.sleep(1)
-            # if 0 < timeDifference and timeDifference < sleepTime:
-            #     time.sleep(sleepTime - timeDifference)
+            # # If rendering the frame on the robot took less time than
+            # # the sleep time, subtract the time_difference from the
+            # # sleepTime and sleep that amount to create the proper
+            # # frame rate
+            # time_difference = time.time() - start_time
+            # if time_difference < sleep_time:
+            #     time.sleep(sleep_time - time_difference)
             # else:
             #     print("Program execution time exceeded the frame rate...")
-            # Otherwise, we do not want to sleep as we have already spent more
-            # time than the frame rate
-
+            # # Otherwise, we do not want to sleep as we have already spent more
+            # # time than the frame rate
+            # start_time = time.time()
 
 if __name__ == "__main__":
     main()
