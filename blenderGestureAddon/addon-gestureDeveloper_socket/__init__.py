@@ -1,13 +1,47 @@
-# __init__.py
-# Initialization file for the Blender plugin gestureDeveloper.
-#
-# Created by Skyler Williams on January 30, 2016
-# going to use socket
+"""Addon for Blender to control robot over TCP/IP socket connection.
 
+"""
 
+import time
 import os
 import sys
 import inspect
+import socket
+import struct
+from threading import Thread
+
+import yaml
+import bpy
+
+NUM_SERVOS = 3
+servo_angles = [0] * NUM_SERVOS
+
+
+class RobotSocketHandler(Thread):
+
+    def __init__(self, NUM_SERVOS, servo_angles):
+        super().__init__()
+
+        self.servo_angles = servo_angles
+
+        self.sig = 'I' * NUM_SERVOS
+
+        sock = socket.socket()
+        sock.connect(('192.168.1.62', 65432))
+        self.stream = sock.makefile('wb')
+
+    def run(self):
+        try:
+            while True:
+                to_send = struct.pack(self.sig, *servo_angles)
+                self.stream.write(to_send)
+                self.stream.flush()
+                time.sleep(0.03)
+        except Exception as e:
+            print(type(e))
+            print(e)
+            self.stream.close()
+
 
 # File name
 print(inspect.getfile(inspect.currentframe()))
@@ -20,13 +54,6 @@ sys.path.append(os.path.dirname(os.path.abspath(inspect.getfile(inspect.currentf
 # print("Directory is:")
 # print(os.getcwd())
 
-import bpy
-import serial
-import yaml
-
-import struct
-from time import sleep
-from math import degrees
 
 # Blender Addon internals, information about the addon
 bl_info = {  
@@ -45,13 +72,6 @@ bl_info = {
 # a non-blocking read
 globalTimeout = None
 
-
-# Create a PySerial port with infinite timeout (blocks on reads), but not yet
-# connected to a hardware port (read in from configs)
-serialPort = serial.Serial(None, 9600, timeout = globalTimeout)
-
-
-
 # gesture_handler(scene)
 #
 # To be called any time there is a change within the scene (e.g. position change,
@@ -60,11 +80,12 @@ def gesture_handler(scene):
     # Want the YAML to include:
     #       - Name of the object
     #       - Arrtibute to watch (rotation x,y,z for now)
-    #       - Number of data points to write out to serial (maybe a dictionary?)
+    #       - Number of data points to write out to socket (maybe a dictionary?)
     #       - Offset for the angle of each motor
     #       - Addressing scheme for motors
-    #       - Serial port to connect through
+    #       - IP address and port to connect through
     global csvOutput
+    global servo_angles
 
     find_current_gesture(scene.frame_current)
 
@@ -73,7 +94,7 @@ def gesture_handler(scene):
         # Create an array to store the angles we get from the Blender scene, and a
         # bool to see if we should send these values to the Arduino
         newAngles = [0] * GestureOperator.numObjects
-        shouldResend = False
+        # shouldResend = False
 
         # Create the base for the CSV output for each servo (aka each Object)
         # Will exist even for frames with no gesture, to make indexing into
@@ -81,11 +102,12 @@ def gesture_handler(scene):
         GestureOperator.csvOutput[scene.frame_current] = [0] * GestureOperator.numObjects
 
         # Generalized loop for putting an arbitrary number of object parameters out 
-        # on the serial connection
+        # on the socket connection
         for i in range(GestureOperator.numObjects):
             object = bpy.data.objects[GestureOperator.objectNames[i]]
             movement = degrees(object.rotation_euler[GestureOperator.objectAxes[i]])
-            servoAngle = int(GestureOperator.objectOffsets[i]) + int(GestureOperator.objectMultipliers[i]) * int(movement)
+            servoAngle = (int(GestureOperator.objectOffsets[i])
+                          + int(GestureOperator.objectMultipliers[i]) * int(movement))
             if servoAngle <= 1:
                 servoAngle = 1
             if servoAngle >= 179:
@@ -98,41 +120,23 @@ def gesture_handler(scene):
 
             # If the angle of a motor has changed, rewrite them all to Arduino
             if (servoAngle != GestureOperator.previousServoAngles[i]):
-                shouldResend = True
+                # shouldResend = True
                 GestureOperator.previousServoAngles[i] = newAngles[i]
 
-        # If we should resend the motor positons, loop through and send each based
-        # on the motor identification scheme (addressing/switching)
-        if (shouldResend == True):
-            print("Scene is: " + str(scene.frame_current))
-            for i in range(GestureOperator.numObjects):
-                # If we are addressing motors, first send "i"
-                if (GestureOperator.motorIdentification == "addressing"):
-                    serialPort.write(struct.pack('B', (181 + i)))
-                    serialRead = serialPort.read()
-                    # NOTE:
-                    # Need to check if it's a chr or "string of length 0" before
-                    # we print to stop getting that error and to see what's going on
-                    print("Address is: " + str(ord(serialRead)))
-                    if (ord(serialRead) != (181 + i)):
-                        stop_operator()
-                        print("Serial send not equal to serial return")
-                        break
+        # loop through motor positions and and send each based on the
+        # motor identification scheme (addressing/switching)
+        print("Scene is: " + str(scene.frame_current))
+        for i in range(GestureOperator.numObjects):
 
-                serialPort.write(struct.pack('B', newAngles[i]))
-                # GestureOperator.previousServoAngles[i] = newAngles[i]
-                print("Write angle " + str(i) + " is: " + str(newAngles[i]))
-
-                serialRead = serialPort.read()
-                # NOTE:
-                # Need to check if it's a chr or "string of length 0" before
-                # we print to stop getting that error and to see what's going on
-                print("Read angle " + str(i) + " is: " + str(ord(serialRead)))
-                if (ord(serialRead) != newAngles[i]):
-                    stop_operator()
-                    print("Serial send not equal to serial return")
-                    break
-            shouldResend = False
+            servo_angle = int(newAngles[i])
+            if (servo_angle > 180):
+                servo_angle = 180
+            elif (servo_angle < 0):
+                servo_angle = 0
+            servo_angles[i] = servo_angle
+            
+            print("Write angle " + str(i) + " is: " + str(newAngles[i]))
+            
     # If we are not within a gesture, tell the user
     else:
         print("Frame " + str(scene.frame_current) + " is not within a gesture")
@@ -144,7 +148,9 @@ def gesture_handler(scene):
 # Blender Addons are implemented via Python classes, so we create a class here
 # and populate it with the desired logic in the methods required by Blender.
 #
-class GestureOperator(bpy.types.Operator): 
+class GestureOperator(bpy.types.Operator):
+
+    
     # Blender Addon internals 
     bl_idname = "object.gesture_operator"  
     bl_label = "Gesture Operator"  
@@ -173,11 +179,13 @@ class GestureOperator(bpy.types.Operator):
     isHandling = False
     # Boolean to see if we should load in configuration data
     loadConfigs = True
+
     
     # execute(self, context)
     #
     # Run on execution of the "Gesture Operator". Required function.
     def execute(self, context):
+        
         # Check if we should load the configs (and do so if necessary)
         if GestureOperator.loadConfigs == True:
             fileName = os.path.join(os.path.dirname(bpy.data.filepath), "gesturerConfigs.yaml")
@@ -198,7 +206,6 @@ class GestureOperator(bpy.types.Operator):
             GestureOperator.shouldOutputCSV = GestureOperator.configs["shouldOutputCSV"]
             GestureOperator.gestureDelimiter = GestureOperator.configs["gestureDelimiter"]
             GestureOperator.previousServoAngles = [0] * GestureOperator.numObjects
-            serialPort.port = GestureOperator.configs["serialPort"]
             # Currently, only load the configs when the "Gesture Operator" 
             # is first called
             GestureOperator.loadConfigs = False
@@ -209,9 +216,13 @@ class GestureOperator(bpy.types.Operator):
             # NOTE: This takes a moment to actually open, so we want to wait until
             #   we know it's open to add our handler to the scene update. Need to
             #   find a better way than hardcoding a sleep value, but it works for now 
-            serialPort.open()
-            print("Opening the serial port, waiting for 2 seconds to connect...")
-            sleep(2)
+
+            print('Opening socket to robot.')
+            print('starting servo socket handler')
+            servo_command_handler = RobotSocketHandler(NUM_SERVOS, servo_angles)
+            servo_command_handler.start()
+
+            # time.sleep(1)
             bpy.app.handlers.scene_update_pre.append(gesture_handler)
             GestureOperator.isHandling = True
         # If we were handling scene changes, remove our handler from the handler list
@@ -220,23 +231,6 @@ class GestureOperator(bpy.types.Operator):
             stop_operator()
         # Blender Python internals, must return {'FINISHED'}
         return {'FINISHED'}
-      
-
-# non_blocking_read()
-# 
-# Performs a non-blocking read on the global serialPort by setting the timeout
-# to 0, reading, and then setting the timeout back to the globalTimeout value.
-def non_blocking_read():
-    serialPort.timeout = 0
-    serialRead = serialPort.read()
-    serialPort.timeout = globalTimeout
-
-    if (len(serialRead) > 0):
-        print("Non-blocking read received: " + str(ord(serialRead)))
-        return serialRead
-
-    return None
-
 
 
 def find_current_gesture(currentFrame):
@@ -258,7 +252,7 @@ def find_current_gesture(currentFrame):
 # stop_operator()
 #
 # Stops the function of the addon by removing the scene handler we added to 
-# capture and send object positions, and by closing the serial port. 
+# capture and send object positions, and TODO by closing the socket. 
 def stop_operator():
 
     print(GestureOperator.csvOutput)
@@ -268,7 +262,6 @@ def stop_operator():
     for handlerID, function in enumerate(reversed(myHandlerList)):
         if function.__name__ == 'gesture_handler':
             myHandlerList.pop(numHandlers - 1 - handlerID)
-    serialPort.close()
     GestureOperator.isHandling = False
 
     # Tell the addon to reload the configs when it next executes
