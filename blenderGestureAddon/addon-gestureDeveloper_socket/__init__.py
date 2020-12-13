@@ -2,6 +2,7 @@
 
 """
 
+import math
 import time
 import os
 import sys
@@ -105,7 +106,7 @@ def gesture_handler(scene):
         # on the socket connection
         for i in range(GestureOperator.numObjects):
             object = bpy.data.objects[GestureOperator.objectNames[i]]
-            movement = degrees(object.rotation_euler[GestureOperator.objectAxes[i]])
+            movement = math.degrees(object.rotation_euler[GestureOperator.objectAxes[i]])
             servoAngle = (int(GestureOperator.objectOffsets[i])
                           + int(GestureOperator.objectMultipliers[i]) * int(movement))
             if servoAngle <= 1:
