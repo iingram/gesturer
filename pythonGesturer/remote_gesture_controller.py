@@ -7,7 +7,7 @@ import argparse
 import csv
 import socket
 import struct
-import sys
+
 import time
 from threading import Thread
 
@@ -33,18 +33,18 @@ filename = args.config_file
 with open(filename) as f:
     stream = f.read()
     configs = yaml.load(stream, Loader=yaml.Loader)
-    
+
 NUM_SERVOS = configs["numObjects"]
 NUM_GESTURES = configs["numGestures"]
 CSV_ANIMATION_FILENAME = configs["csvOutputName"]
 
 servo_angles = [0] * NUM_SERVOS
 
-# Value to represent the new gesture to be performed, when this value is 
+# Value to represent the new gesture to be performed, when this value is
 # changed in update_gesture() the program smooths between the current gesture
 # and this new gesture
 
-# def update_gesture(frame, csv_gesture_data, csv_gesture_length):
+
 def update_gesture(current_frame, current_gesture, num_frames_in_gesture):
     if current_frame >= num_frames_in_gesture - 1:
         new_gesture = current_gesture + 1
@@ -52,7 +52,7 @@ def update_gesture(current_frame, current_gesture, num_frames_in_gesture):
             new_gesture = 0
     else:
         new_gesture = current_gesture
-            
+
     return new_gesture
 
 
@@ -64,7 +64,7 @@ class ServoCommandHandler(Thread):
         self.servo_angles = servo_angles
 
         self.sig = 'I' * NUM_SERVOS
-        
+
         sock = socket.socket()
         sock.connect((SERVER_IP, PORT))
         self.stream = sock.makefile('wb')
@@ -86,7 +86,7 @@ def frame_handler(current_frame, gesture_positions):
     global servo_angles
     for i in range(len(servo_angles)):
         # We index plus 1 into the gesture_positions since the first
-        # column is the frame index 
+        # column is the frame index
         servo_angle = int(gesture_positions[current_frame][i + 1])
         # servo_angle -= 120
         if (servo_angle > 180):
@@ -98,14 +98,13 @@ def frame_handler(current_frame, gesture_positions):
 
 
 def main():
-    
+
     servo_command_handler = ServoCommandHandler(NUM_SERVOS, servo_angles)
     servo_command_handler.start()
 
     # read in animation information from csv file
     with open(CSV_ANIMATION_FILENAME, 'rt') as f:
         reader = csv.reader(f)
-        row_count = 0
         # A list of gesture animations, each containing a list of the
         # positions for each motor at each frame of the gesture
         csv_gesture_data = []
@@ -115,21 +114,23 @@ def main():
         csv_gesture_length = [0] * NUM_GESTURES
 
         gestureCount = 0
-        # Read through the CSV file and populate the gesture data/length arrays 
+        # Read through the CSV file and populate the gesture data/length arrays
         for row in reader:
             # If the first item in the CSV row is a "*", we have
             # reached the end of a gesture
             if row[0] == "*":
-                csv_gesture_length[gestureCount] = len(csv_gesture_data[gestureCount])
+                length = len(csv_gesture_data[gestureCount])
+                csv_gesture_length[gestureCount] = length
                 gestureCount += 1
             # Otherwise, continue adding to the current gesture
             else:
                 csv_gesture_data[gestureCount].append(row)
 
-        # In case there was no "*" at the end of the last gesture, we set the last 
-        # gesture length
+        # In case there was no "*" at the end of the last gesture, we
+        # set the last gesture length
         if gestureCount == (NUM_GESTURES - 1):
-            csv_gesture_length[gestureCount] = len(csv_gesture_data[gestureCount])
+            length = len(csv_gesture_data[gestureCount])
+            csv_gesture_length[gestureCount] = length
 
     # # Set frame rate and corresponding sleep rate
     # frameRate = 24
@@ -149,13 +150,12 @@ def main():
                                       current_frame,
                                       servo_angles))
             time.sleep(.03)
-            
-            # LOGIC FOR SWITCHING "current_gesture" GOES HERE
-            # update_gesture(current_frame, csv_gesture_data, csv_gesture_length)
+
+            # LOGIC FOR SWITCHING GESTURES GOES HERE
             new_gesture = update_gesture(current_frame,
                                          current_gesture,
                                          num_frames_in_gesture)
-            
+
             # mechanics for switching gesture if necessary
             if current_gesture != new_gesture:
                 print("Switching Gestures...")
@@ -181,9 +181,11 @@ def main():
             #     time.sleep(sleep_time - time_difference)
             # else:
             #     print("Program execution time exceeded the frame rate...")
-            # # Otherwise, we do not want to sleep as we have already spent more
-            # # time than the frame rate
+
+            # Otherwise, we do not want to sleep as we have already spent more
+            # time than the frame rate
             # start_time = time.time()
+
 
 if __name__ == "__main__":
     main()
