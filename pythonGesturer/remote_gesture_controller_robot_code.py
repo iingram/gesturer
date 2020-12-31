@@ -7,7 +7,6 @@ from threading import Thread
 from servo import Servo, prep_servo_board
 
 parser = argparse.ArgumentParser()
-
 parser.add_argument('-n',
                     '--num_servos',
                     required=True,
@@ -20,8 +19,8 @@ parser.add_argument('-p',
                     '--port',
                     required=True,
                     help='Port number to use on server. Often using 65432')
-
 args = parser.parse_args()
+
 NUM_SERVOS = int(args.num_servos)
 IP = args.ip
 PORT = int(args.port)  # often using 65432
@@ -42,38 +41,34 @@ class SocketHandler(Thread):
         self.sig = 'I' * num_servos
         self.servo_angles = servo_angles
 
-        sock = socket.socket()
-        sock.bind((IP, PORT))
-        sock.listen()
-        print('[INFO] Waiting for connection.')
-        connection, address = sock.accept()
-        print('[INFO] Connection made.')
-
-        self.stream = connection.makefile('rb')
+        self.sock = socket.socket()
+        self.sock.bind((IP, PORT))
+        self.sock.listen()
 
     def run(self):
-        try:
+        while True:
+            print('[INFO] Waiting for connection.')
+            connection, address = self.sock.accept()
+            print('[INFO] Connection made.')
+            stream = connection.makefile('wrb')
+
+            # send current servo angles over socket
+            to_send = struct.pack(self.sig, *servo_angles)
+            stream.write(to_send)
+            stream.flush()
+
             while True:
                 amount_to_read = struct.calcsize(self.sig)
-                data = self.stream.read(amount_to_read)
+                data = stream.read(amount_to_read)
+                if not data:
+                    break
+
                 contents = struct.unpack(self.sig, data)
                 for i, content in enumerate(contents):
                     self.servo_angles[i] = contents[i]
 
-                # if letter == ord('q'):
-                #     break
-        except KeyboardInterrupt as e:
-            print(e)
-            print('Received keyboard interrupt')
-        except Exception as e:
-            print(type(e))
-            print('Socket connection failed.'
-                  + ' Maybe socket closed/ended on client side?')
-        finally:
-            print('Closing up shop.')
-            self.stream.close()
-            # self.connection.close()
-            # self.sock.close()
+            print('[INFO] Socket disconnected.')
+            stream.close()
 
 
 class ServoController(Thread):
@@ -107,6 +102,7 @@ def main():
     comms.start()
 
     servo_controller = ServoController(NUM_SERVOS, servo_angles)
+    servo_controller.setDaemon(True)
     servo_controller.start()
 
 
