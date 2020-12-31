@@ -4,33 +4,26 @@ import time
 import argparse
 from threading import Thread
 
+import yaml
+
 from servo import Servo, prep_servo_board
 
 parser = argparse.ArgumentParser()
-parser.add_argument('-n',
-                    '--num_servos',
-                    required=True,
-                    help='Number of servos to run.')
-parser.add_argument('-i',
-                    '--ip',
-                    required=True,
-                    help='IP of host server.')
-parser.add_argument('-p',
-                    '--port',
-                    required=True,
-                    help='Port number to use on server. Often using 65432')
+parser.add_argument('config_file',
+                    help='Gesturer Configuration File.')
 args = parser.parse_args()
+with open(args.config_file) as f:
+    configs = yaml.load(f, Loader=yaml.SafeLoader)
 
-NUM_SERVOS = int(args.num_servos)
-IP = args.ip
-PORT = int(args.port)  # often using 65432
+NUM_SERVOS = configs['numObjects']
+IP = '0.0.0.0'
+PORT = configs['robot_port']
 
 servo_angles = [0] * NUM_SERVOS
-
-current_servo_index = 0
-
 SERVO_MIN = 0
 SERVO_MAX = 180
+
+current_servo_index = 0
 
 
 class SocketHandler(Thread):
