@@ -60,7 +60,8 @@ def updateGesture(frame, csvGestureData, csvGestureLength):
 
 
 
-
+# NOTE: ALREADY PUT THIS IN gesture_functions.py.  NEXT TIME YOU ARE
+# WORKING ON THIS, REFACTOR SO THIS CODE IS USING THAT.
 def gestureSmooth(sleepTime, numObjects, startPosArray, endPosArray):
     print("Smoothing between gestures...")
 
