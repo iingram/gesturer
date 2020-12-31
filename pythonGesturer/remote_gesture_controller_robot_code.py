@@ -19,10 +19,9 @@ NUM_SERVOS = configs['numObjects']
 IP = '0.0.0.0'
 PORT = configs['robot_port']
 
-servo_angles = [0] * NUM_SERVOS
-SERVO_MIN = 0
-SERVO_MAX = 180
+SERVO_LIMITS = configs['servoLimits']
 
+servo_angles = [0] * NUM_SERVOS
 current_servo_index = 0
 
 
@@ -77,16 +76,32 @@ class ServoController(Thread):
         for i in range(num_servos):
             self.servos.append(Servo(bus, i))
 
+    def _print_angles(self, commands, bounded_commands):
+        strg = ''
+
+        for command, bounded in zip(commands, bounded_commands):
+            strg += '{}/{} || '.format(command, bounded)
+
+        print(strg)
+
+    def _limit_angle(self, command, servo_limit):
+        if command < servo_limit[0]:
+            command = servo_limit[0]
+        elif command > servo_limit[1]:
+            command = servo_limit[1]
+
+        return command
+
     def run(self):
         while True:
-            print(servo_angles)
-            for index, servo in enumerate(self.servos):
-                command = self.servo_angles[index]
-                if command < SERVO_MIN:
-                    command = 0
-                elif command > SERVO_MAX:
-                    command = SERVO_MAX
+            bounded_commands = []
+            for angle, limit in zip(self.servo_angles, SERVO_LIMITS):
+                bounded_commands.append(self._limit_angle(angle, limit))
+                
+            for command, servo in zip(bounded_commands, self.servos):
                 servo.command_angle(command)
+
+            self._print_angles(self.servo_angles, bounded_commands)
             time.sleep(0.03)
 
 
