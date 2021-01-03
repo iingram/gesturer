@@ -109,10 +109,10 @@ def gesture_handler(scene):
             movement = math.degrees(object.rotation_euler[GestureOperator.objectAxes[i]])
             servoAngle = (int(GestureOperator.objectOffsets[i])
                           + int(GestureOperator.objectMultipliers[i]) * int(movement))
-            if servoAngle <= 1:
-                servoAngle = 1
-            if servoAngle >= 179:
-                servoAngle = 179
+            if servoAngle <= 0:
+                servoAngle = 0
+            elif servoAngle >= 180:
+                servoAngle = 180
 
             newAngles[i] = servoAngle
 
@@ -127,16 +127,17 @@ def gesture_handler(scene):
         # loop through motor positions and and send each based on the
         # motor identification scheme (addressing/switching)
         print("Scene is: " + str(scene.frame_current))
-        for i in range(GestureOperator.numObjects):
+        servo_angles = [int(angle) for angle in newAngles]
+        # for i in range(GestureOperator.numObjects):
 
-            servo_angle = int(newAngles[i])
-            if (servo_angle > 180):
-                servo_angle = 180
-            elif (servo_angle < 0):
-                servo_angle = 0
-            servo_angles[i] = servo_angle
+            # servo_angle = int(newAngles[i])
+            # if (servo_angle > 180):
+            #     servo_angle = 180
+            # elif (servo_angle < 0):
+            #     servo_angle = 0
+            # servo_angles[i] = servo_angle
             
-            print("Write angle " + str(i) + " is: " + str(newAngles[i]))
+         #   print("Write angle " + str(i) + " is: " + str(newAngles[i]))
             
     # If we are not within a gesture, tell the user
     else:
@@ -227,6 +228,7 @@ class GestureOperator(bpy.types.Operator):
                                                        (GestureOperator.ip,
                                                         GestureOperator.port),
                                                        servo_angles)
+            servo_command_handler.setDaemon(True)
             servo_command_handler.start()
 
             # time.sleep(1)
