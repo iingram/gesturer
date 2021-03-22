@@ -28,6 +28,7 @@ class RobotSocketHandler(Thread):
         self.sig = 'I' * NUM_SERVOS
 
         sock = socket.socket()
+        print(server_deets)
         sock.connect(server_deets)
         self.stream = sock.makefile('wb')
 
@@ -126,7 +127,7 @@ def gesture_handler(scene):
 
         # loop through motor positions and and send each based on the
         # motor identification scheme (addressing/switching)
-        print("Scene is: " + str(scene.frame_current))
+        # print("Scene (frame) is: " + str(scene.frame_current))
         servo_angles = [int(angle) for angle in newAngles]
         # for i in range(GestureOperator.numObjects):
 
@@ -190,7 +191,7 @@ class GestureOperator(bpy.types.Operator):
         
         # Check if we should load the configs (and do so if necessary)
         if GestureOperator.loadConfigs == True:
-            fileName = os.path.join(os.path.dirname(bpy.data.filepath), "gesturerConfigs.yaml")
+            fileName = os.path.join(os.path.dirname(bpy.data.filepath), "gesturer_configs.yaml")
             fileStream = open(fileName).read()
             GestureOperator.configs = yaml.load(fileStream, Loader=yaml.Loader)
 
@@ -264,7 +265,8 @@ def find_current_gesture(currentFrame):
 # capture and send object positions, and TODO by closing the socket. 
 def stop_operator():
 
-    print(GestureOperator.csvOutput)
+    # this prints out the full animation csv
+    # print(GestureOperator.csvOutput)
 
     myHandlerList = bpy.app.handlers.scene_update_pre
     numHandlers = len(myHandlerList)
