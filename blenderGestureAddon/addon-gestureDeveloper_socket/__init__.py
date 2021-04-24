@@ -14,28 +14,31 @@ from threading import Thread
 import yaml
 import bpy
 
-NUM_SERVOS = 6
-servo_angles = [0] * NUM_SERVOS
+servo_angles = [0]
 
 
 class RobotSocketHandler(Thread):
 
-    def __init__(self, NUM_SERVOS, server_deets, servo_angles):
+    def __init__(self,
+                 num_servos,
+                 server_address,
+                 servo_angles):
         super().__init__()
 
         self.servo_angles = servo_angles
 
-        self.sig = 'I' * NUM_SERVOS
+        self.sig = 'I' * num_servos
 
         sock = socket.socket()
-        print(server_deets)
-        sock.connect(server_deets)
+        print('[INFO] Robot Server IP and Port: {}'.format(server_address))
+        sock.connect(server_address)
+        print('[INFO] Socket connection successful')
         self.stream = sock.makefile('wb')
 
     def run(self):
         try:
             while True:
-                to_send = struct.pack(self.sig, *servo_angles)
+                to_send = struct.pack(self.sig, *self.servo_angles)
                 self.stream.write(to_send)
                 self.stream.flush()
                 time.sleep(0.03)
@@ -60,7 +63,7 @@ sys.path.append(os.path.dirname(os.path.abspath(inspect.getfile(inspect.currentf
 # Blender Addon internals, information about the addon
 bl_info = {  
  "name": "Gesture Operator",  
- "author": "Skyler Williams",  
+ "author": "Skyler Williams and Ian Ingram",  
  "version": (1, 0),  
  "blender": (2, 6, 4),  
  "location": "View3D > Object > Gesture Operator",  
@@ -78,6 +81,8 @@ globalTimeout = None
 #
 # To be called any time there is a change within the scene (e.g. position change,
 # rotation change, current frame change)
+
+
 def gesture_handler(scene):
     # Want the YAML to include:
     #       - Name of the object
@@ -124,11 +129,14 @@ def gesture_handler(scene):
             if (servoAngle != GestureOperator.previousServoAngles[i]):
                 # shouldResend = True
                 GestureOperator.previousServoAngles[i] = newAngles[i]
-
+ 
         # loop through motor positions and and send each based on the
         # motor identification scheme (addressing/switching)
         # print("Scene (frame) is: " + str(scene.frame_current))
-        servo_angles = [int(angle) for angle in newAngles]
+        temp = [int(angle) for angle in newAngles]
+        for i in range(len(servo_angles)):
+            servo_angles[i] = temp[i]
+        
         # for i in range(GestureOperator.numObjects):
 
             # servo_angle = int(newAngles[i])
@@ -144,7 +152,6 @@ def gesture_handler(scene):
     else:
         print("Frame " + str(scene.frame_current) + " is not within a gesture")
 
-   
 
 # GestureOperator class
 #
@@ -152,8 +159,6 @@ def gesture_handler(scene):
 # and populate it with the desired logic in the methods required by Blender.
 #
 class GestureOperator(bpy.types.Operator):
-
-    
     # Blender Addon internals 
     bl_idname = "object.gesture_operator"  
     bl_label = "Gesture Operator"  
@@ -182,15 +187,17 @@ class GestureOperator(bpy.types.Operator):
     isHandling = False
     # Boolean to see if we should load in configuration data
     loadConfigs = True
-
     
     # execute(self, context)
     #
     # Run on execution of the "Gesture Operator". Required function.
     def execute(self, context):
+        global servo_angles
         
         # Check if we should load the configs (and do so if necessary)
         if GestureOperator.loadConfigs == True:
+            print('[INFO] Loading Configurations')
+            
             fileName = os.path.join(os.path.dirname(bpy.data.filepath), "gesturer_configs.yaml")
             fileStream = open(fileName).read()
             GestureOperator.configs = yaml.load(fileStream, Loader=yaml.Loader)
@@ -216,16 +223,20 @@ class GestureOperator(bpy.types.Operator):
             # is first called
             GestureOperator.loadConfigs = False
 
+            # do this only the first time the operator is turned on
+            if len(servo_angles) != GestureOperator.numObjects:
+                for i in range(GestureOperator.numObjects - 1):
+                    servo_angles.append(0)
+
+
         # If we are not currently handling scene changes, set function "gesture_handler"
         # to be run every scene change
         if GestureOperator.isHandling == False: 
             # NOTE: This takes a moment to actually open, so we want to wait until
             #   we know it's open to add our handler to the scene update. Need to
             #   find a better way than hardcoding a sleep value, but it works for now 
-
-            print('Opening socket to robot.')
-            print('starting servo socket handler')
-            servo_command_handler = RobotSocketHandler(NUM_SERVOS,
+            print('[INFO] Starting servo socket handler')
+            servo_command_handler = RobotSocketHandler(GestureOperator.numObjects,
                                                        (GestureOperator.ip,
                                                         GestureOperator.port),
                                                        servo_angles)
@@ -264,7 +275,6 @@ def find_current_gesture(currentFrame):
 # Stops the function of the addon by removing the scene handler we added to 
 # capture and send object positions, and TODO by closing the socket. 
 def stop_operator():
-
     # this prints out the full animation csv
     # print(GestureOperator.csvOutput)
 
@@ -277,7 +287,7 @@ def stop_operator():
 
     # Tell the addon to reload the configs when it next executes
     GestureOperator.loadConfigs = True
-
+    
     # Write out the CSV animation output to a file
     if GestureOperator.shouldOutputCSV == True:
         # TODO: Write out animation output for each individual gesture into the same
@@ -319,6 +329,8 @@ def stop_operator():
 
         outputFile.close()
         print("File Closed")
+
+        
 
     # Reset the CSV dictionary
     GestureOperator.csvOutput = {}
