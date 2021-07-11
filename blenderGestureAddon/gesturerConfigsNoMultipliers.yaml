@@ -1,0 +1,40 @@
+# Gesturer Configuration Elements
+#
+# NOTE: Look into compiling/uploading desired Arduino code (generated dynamically 
+#	from configs to have Addressed/Switching, correct number of motors, etc.) to
+# 	the board when we first run the addon in Blender. Relevant links below.
+#	http://forum.arduino.cc/index.php?topic=46588.0
+# 	http://arkku.com/misc/arduino_make.sh
+
+objectNames:
+    - Cube.001
+    - Cube
+objectAxes:
+    - 0
+    - 1
+objectOffsets:
+    - 90
+    - 90
+servoPins:
+    - 13
+    - 7
+numObjects: 2
+serialPort: /dev/tty.usbmodem1411
+motorIdentification: switching
+
+switchingOffsets:
+    2: servoObjects  
+    3: numServos  
+    4: servoPins  
+    10: attachServos
+    24: exceedsUpperBound  
+    26: servoSwitch 
+    27: currentServoIncrement 
+
+addressingOffsets:
+    2: servoObjects  
+    3: numServos  
+    4: servoPins  
+    10: attachServos
+    24: receiveAddressByte
+    25: addressingSwitch 
