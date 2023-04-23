@@ -244,7 +244,7 @@ class GestureOperator(bpy.types.Operator):
             servo_command_handler.start()
 
             # time.sleep(1)
-            bpy.app.handlers.scene_update_pre.append(gesture_handler)
+            bpy.app.handlers.depsgraph_update_pre.append(gesture_handler)
             GestureOperator.isHandling = True
         # If we were handling scene changes, remove our handler from the handler list
         # by reverse enumerating and popping it off
@@ -278,7 +278,7 @@ def stop_operator():
     # this prints out the full animation csv
     # print(GestureOperator.csvOutput)
 
-    myHandlerList = bpy.app.handlers.scene_update_pre
+    myHandlerList = bpy.app.handlers.depsgraph_update_pre
     numHandlers = len(myHandlerList)
     for handlerID, function in enumerate(reversed(myHandlerList)):
         if function.__name__ == 'gesture_handler':
