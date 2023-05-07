@@ -1,5 +1,8 @@
 """Addon for Blender to control robot over TCP/IP socket connection.
 
+Allows the creation of a repertoire of gestures/behaviors that the
+robots can then use in their activities.
+
 """
 
 import math
@@ -18,6 +21,9 @@ servo_angles = [0]
 
 
 class RobotSocketHandler(Thread):
+    """Handles connection to robot
+
+    """
 
     def __init__(self,
                  num_servos,
@@ -30,7 +36,6 @@ class RobotSocketHandler(Thread):
         self.sig = 'I' * num_servos
 
         sock = socket.socket()
-        print('temp version : 2')
         print('[INFO] Robot Server IP and Port: {}'.format(server_address))
         sock.connect(server_address)
         print('[INFO] Socket connection successful')
@@ -82,10 +87,10 @@ def gesture_handler(scene):
     global csvOutput
     global servo_angles
 
-    find_current_gesture(scene.frame_current)
+    determine_current_gesture(scene.frame_current)
 
     # Only handle the scene if it is within a gesture
-    if GestureOperator.currentGesture != -1:
+    if GestureOperator.current_gesture != -1:
         # Create an array to store the angles we get from the Blender
         # scene, and a bool to see if we should send these values to
         # the Arduino
@@ -121,7 +126,7 @@ def gesture_handler(scene):
             GestureOperator.csvOutput[scene.frame_current][i] = servoAngle
 
             # If the angle of a motor has changed, rewrite them all to Arduino
-            if (servoAngle != GestureOperator.previousServoAngles[i]):
+            if servoAngle != GestureOperator.previousServoAngles[i]:
                 # shouldResend = True
                 GestureOperator.previousServoAngles[i] = newAngles[i]
 
@@ -145,13 +150,14 @@ def gesture_handler(scene):
         print("Frame " + str(scene.frame_current) + " is not within a gesture")
 
 
-# GestureOperator class
-#
-# Blender Addons are implemented via Python classes, so we create a class here
-# and populate it with the desired logic in the methods required by Blender.
-#
 class GestureOperator(bpy.types.Operator):
-    # Blender Addon internals
+    """Defines the custom Blender Add-On
+
+    Blender Addons are implemented via Python classes, so we create a
+    class and populate it with the desired logic in the methods
+    required by Blender.
+
+    """
     bl_idname = "object.gesture_operator"
     bl_label = "Gesture Operator"
 
@@ -170,7 +176,7 @@ class GestureOperator(bpy.types.Operator):
     # Create a dictionary of values to be written out to CSVs
     csvOutput = {}
 
-    currentGesture = -1
+    current_gesture = -1
 
     # Boolean to see if the scene handler should be set or reset
     isHandling = False
@@ -243,20 +249,23 @@ class GestureOperator(bpy.types.Operator):
         return {'FINISHED'}
 
 
-def find_current_gesture(currentFrame):
+def determine_current_gesture(current_frame):
+    """Determine if within a gesture range
 
-    # Reset currentGesture to -1, will remain so if currentFrame is not within
-    # a gesture
-    # currentGesture = -1
+    Check to see if the current_frame is within any of the gestures'
+    ranges, and set the current_gesture if so
 
-    # Check to see if the currentFrame is within any of the gestures'
-    # windows, and set the currentGesture if so
+    """
+    # Reset current_gesture to -1, will remain so if current_frame is
+    # not within a gesture
+    # current_gesture = -1
+
     for i in range(GestureOperator.numGestures):
         # Note, gestureFrames[i][0] is the startingFrame of gesture i
         # and gestureFrames[i][1] is the endingFrame of gesture i
-        if (currentFrame >= GestureOperator.gestureFrames[i][0]
-           and currentFrame <= GestureOperator.gestureFrames[i][1]):
-            GestureOperator.currentGesture = i
+        if (current_frame >= GestureOperator.gestureFrames[i][0]
+           and current_frame <= GestureOperator.gestureFrames[i][1]):
+            GestureOperator.current_gesture = i
             break
 
 
@@ -279,23 +288,23 @@ def stop_operator():
 
     # Write out the CSV animation output to a file
     if GestureOperator.shouldOutputCSV:
-        outputFilePath = os.path.join(os.path.dirname(bpy.data.filepath),
-                                      GestureOperator.csvOutputName)
-        outputFile = open(outputFilePath, "w")
+        output_filepath = os.path.join(os.path.dirname(bpy.data.filepath),
+                                       GestureOperator.csvOutputName)
+        output_file = open(output_filepath, "w", encoding='utf-8')
 
         for gesture in range(GestureOperator.numGestures):
             # Get scene information for the current gesture
-            gestureStart = GestureOperator.gestureFrames[gesture][0]
-            gestureEnd = GestureOperator.gestureFrames[gesture][1]
+            gesture_start = GestureOperator.gestureFrames[gesture][0]
+            gesture_end = GestureOperator.gestureFrames[gesture][1]
 
             # Translate each gesture so it starts at 0
-            offsetIndex = 0
+            offset_index = 0
 
             # Range is not inclusive, so we loop over the start to end+1
-            for sceneIndex in range(gestureStart, (gestureEnd + 1)):
-                scene = GestureOperator.csvOutput[sceneIndex]
+            for scene_index in range(gesture_start, (gesture_end + 1)):
+                scene = GestureOperator.csvOutput[scene_index]
                 line = ""
-                line += str(offsetIndex) + ", "
+                line += str(offset_index) + ", "
 
                 # Write out the position of each object into columns of the CSV
                 for i in range(GestureOperator.numObjects):
@@ -304,16 +313,16 @@ def stop_operator():
                         line += ", "
 
                 line += "\n"
-                outputFile.write(line)
+                output_file.write(line)
 
-                offsetIndex += 1
+                offset_index += 1
 
             # Delimit each gesture with the proper character
             line = GestureOperator.gestureDelimiter
             line += "\n"
-            outputFile.write(line)
+            output_file.write(line)
 
-        outputFile.close()
+        output_file.close()
         print("File Closed")
 
     # Reset the CSV dictionary
