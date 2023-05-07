@@ -50,48 +50,35 @@ class RobotSocketHandler(Thread):
 
 
 # File name
-print(inspect.getfile(inspect.currentframe()))
+filename = inspect.getfile(inspect.currentframe())
+print('Filename is {}'.format(filename))
 # Path to file
-print(os.path.dirname(os.path.abspath(inspect.getfile(inspect.currentframe()))))
+path_to_file = os.path.dirname(os.path.abspath(filename))
+print('Path to file is {}'.format(path_to_file))
 
-# print("Path is:")
-# print(sys.path)
-sys.path.append(os.path.dirname(os.path.abspath(inspect.getfile(inspect.currentframe()))))
-# print("Directory is:")
-# print(os.getcwd())
-
+sys.path.append(path_to_file)
 
 # Blender Addon internals, information about the addon
-bl_info = {  
- "name": "Gesture Operator",  
- "author": "Skyler Williams and Ian Ingram",  
- "version": (1, 0),  
- "blender": (2, 6, 4),  
- "location": "View3D > Object > Gesture Operator",  
- "description": "Starts the gesture communication for robotics",  
- "warning": "",  
- "wiki_url": "",  
- "tracker_url": "",  
- "category": "Object"} 
- 
-# Create a global timeout variable, so we can reset the timeout after performing
-# a non-blocking read
+bl_info = {
+ "name": "Gesture Operator",
+ "author": "Skyler Williams and Ian Ingram",
+ "version": (1, 0, 1),
+ "blender": (2, 6, 4),
+ "location": "View3D > Object > Gesture Operator",
+ "description": "Starts the gesture communication for robotics",
+ "warning": "",
+ "wiki_url": "",
+ "tracker_url": "",
+ "category": "Object"}
+
+# Create a global timeout variable, so we can reset the timeout after
+# performing a non-blocking read
 globalTimeout = None
 
-# gesture_handler(scene)
-#
-# To be called any time there is a change within the scene (e.g. position change,
-# rotation change, current frame change)
 
-
+# To be called any time there is a change within the scene
+# (e.g. position change, rotation change, current frame change)
 def gesture_handler(scene):
-    # Want the YAML to include:
-    #       - Name of the object
-    #       - Arrtibute to watch (rotation x,y,z for now)
-    #       - Number of data points to write out to socket (maybe a dictionary?)
-    #       - Offset for the angle of each motor
-    #       - Addressing scheme for motors
-    #       - IP address and port to connect through
     global csvOutput
     global servo_angles
 
@@ -99,23 +86,30 @@ def gesture_handler(scene):
 
     # Only handle the scene if it is within a gesture
     if GestureOperator.currentGesture != -1:
-        # Create an array to store the angles we get from the Blender scene, and a
-        # bool to see if we should send these values to the Arduino
+        # Create an array to store the angles we get from the Blender
+        # scene, and a bool to see if we should send these values to
+        # the Arduino
         newAngles = [0] * GestureOperator.numObjects
         # shouldResend = False
 
         # Create the base for the CSV output for each servo (aka each Object)
         # Will exist even for frames with no gesture, to make indexing into
         # the CSV from the YAML start/end values easier
-        GestureOperator.csvOutput[scene.frame_current] = [0] * GestureOperator.numObjects
+        num_objects = GestureOperator.numObjects
+        GestureOperator.csvOutput[scene.frame_current] = [0] * num_objects
 
-        # Generalized loop for putting an arbitrary number of object parameters out 
-        # on the socket connection
+        # Generalized loop for putting an arbitrary number of object
+        # parameters out on the socket connection
         for i in range(GestureOperator.numObjects):
+            # select the object by its name
             object = bpy.data.objects[GestureOperator.objectNames[i]]
-            movement = math.degrees(object.rotation_euler[GestureOperator.objectAxes[i]])
-            servoAngle = (int(GestureOperator.objectOffsets[i])
-                          + int(GestureOperator.objectMultipliers[i]) * int(movement))
+            # determine which axis is animated for that object
+            animated_axis = GestureOperator.objectAxes[i]
+            # calculate the current angle in degrees of that object
+            angle_deg = int(math.degrees(object.rotation_euler[animated_axis]))
+            # NOTE: should the multipliers really be converted to int this way?
+            servoAngle = (int(GestureOperator.offsets[i])
+                          + int(GestureOperator.multipliers[i]) * angle_deg)
             if servoAngle <= 0:
                 servoAngle = 0
             elif servoAngle >= 180:
@@ -165,8 +159,8 @@ class GestureOperator(bpy.types.Operator):
     numObjects = 0
     objectNames = []
     objectAxes = []
-    objectOffsets = []
-    objectMultipliers = []
+    offsets = []
+    multipliers = []
     previousServoAngles = []
     numGestures = 0
     gestureFrames = []
@@ -205,8 +199,8 @@ class GestureOperator(bpy.types.Operator):
 
             GestureOperator.objectNames = configs["objectNames"]
             GestureOperator.objectAxes = configs["objectAxes"]
-            GestureOperator.objectOffsets = configs["objectOffsets"]
-            GestureOperator.objectMultipliers = configs["objectMultipliers"]
+            GestureOperator.offsets = configs["objectOffsets"]
+            GestureOperator.multipliers = configs["objectMultipliers"]
             GestureOperator.numObjects = configs["numObjects"]
             GestureOperator.previousServoAngles = [0] * configs["numObjects"]
             GestureOperator.numGestures = configs["numGestures"]
