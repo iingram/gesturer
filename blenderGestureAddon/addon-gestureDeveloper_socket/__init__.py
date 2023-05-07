@@ -30,6 +30,7 @@ class RobotSocketHandler(Thread):
         self.sig = 'I' * num_servos
 
         sock = socket.socket()
+        print('temp version : 2')
         print('[INFO] Robot Server IP and Port: {}'.format(server_address))
         sock.connect(server_address)
         print('[INFO] Socket connection successful')
@@ -122,21 +123,18 @@ def gesture_handler(scene):
 
             newAngles[i] = servoAngle
 
-            # Set the CSV output for the given servo and angle 
+            # Set the CSV output for the given servo and angle
             GestureOperator.csvOutput[scene.frame_current][i] = servoAngle
 
             # If the angle of a motor has changed, rewrite them all to Arduino
             if (servoAngle != GestureOperator.previousServoAngles[i]):
                 # shouldResend = True
                 GestureOperator.previousServoAngles[i] = newAngles[i]
- 
-        # loop through motor positions and and send each based on the
-        # motor identification scheme (addressing/switching)
-        # print("Scene (frame) is: " + str(scene.frame_current))
+
         temp = [int(angle) for angle in newAngles]
         for i in range(len(servo_angles)):
             servo_angles[i] = temp[i]
-        
+
         # for i in range(GestureOperator.numObjects):
 
             # servo_angle = int(newAngles[i])
@@ -145,9 +143,9 @@ def gesture_handler(scene):
             # elif (servo_angle < 0):
             #     servo_angle = 0
             # servo_angles[i] = servo_angle
-            
-         #   print("Write angle " + str(i) + " is: " + str(newAngles[i]))
-            
+
+        #   print("Write angle " + str(i) + " is: " + str(newAngles[i]))
+
     # If we are not within a gesture, tell the user
     else:
         print("Frame " + str(scene.frame_current) + " is not within a gesture")
@@ -159,12 +157,10 @@ def gesture_handler(scene):
 # and populate it with the desired logic in the methods required by Blender.
 #
 class GestureOperator(bpy.types.Operator):
-    # Blender Addon internals 
-    bl_idname = "object.gesture_operator"  
-    bl_label = "Gesture Operator"  
-    
-    # Raw configuration data
-    configs = {}
+    # Blender Addon internals
+    bl_idname = "object.gesture_operator"
+    bl_label = "Gesture Operator"
+
     # Extracted configuration data
     numObjects = 0
     objectNames = []
@@ -172,9 +168,8 @@ class GestureOperator(bpy.types.Operator):
     objectOffsets = []
     objectMultipliers = []
     previousServoAngles = []
-    motorIdentification = ""
     numGestures = 0
-    gestureFrames = [] 
+    gestureFrames = []
     csvOutputName = ""
     shouldOutputCSV = False
     gestureDelimiter = ""
@@ -187,40 +182,40 @@ class GestureOperator(bpy.types.Operator):
     isHandling = False
     # Boolean to see if we should load in configuration data
     loadConfigs = True
-    
+
     # execute(self, context)
     #
     # Run on execution of the "Gesture Operator". Required function.
     def execute(self, context):
         global servo_angles
-        
+
         # Check if we should load the configs (and do so if necessary)
-        if GestureOperator.loadConfigs == True:
+        if GestureOperator.loadConfigs:
             print('[INFO] Loading Configurations')
-            
-            fileName = os.path.join(os.path.dirname(bpy.data.filepath), "gesturer_configs.yaml")
+
+            fileName = os.path.join(os.path.dirname(bpy.data.filepath),
+                                    "gesturer_configs.yaml")
             fileStream = open(fileName).read()
-            GestureOperator.configs = yaml.load(fileStream, Loader=yaml.Loader)
+            configs = yaml.load(fileStream, Loader=yaml.Loader)
 
-            # TODO: Put all of this within a try catch and catch KeyErrors for 
-            # improperly constructed YAML files
-            GestureOperator.ip = GestureOperator.configs["robot_ip"]
-            GestureOperator.port = int(GestureOperator.configs["robot_port"])
+            # TODO: Put all of this within a try catch and catch
+            # KeyErrors for improperly constructed YAML files
+            GestureOperator.ip = configs["robot_ip"]
+            GestureOperator.port = int(configs["robot_port"])
 
-            GestureOperator.objectNames = GestureOperator.configs["objectNames"]
-            GestureOperator.objectAxes = GestureOperator.configs["objectAxes"]
-            GestureOperator.objectOffsets = GestureOperator.configs["objectOffsets"]
-            GestureOperator.objectMultipliers = GestureOperator.configs["objectMultipliers"]
-            GestureOperator.numObjects = GestureOperator.configs["numObjects"]
-            GestureOperator.motorIdentification = GestureOperator.configs["motorIdentification"]
-            GestureOperator.numGestures = GestureOperator.configs["numGestures"]
-            GestureOperator.gestureFrames = GestureOperator.configs["gestureFrames"]
-            GestureOperator.csvOutputName = GestureOperator.configs["csvOutputName"]
-            GestureOperator.shouldOutputCSV = GestureOperator.configs["shouldOutputCSV"]
-            GestureOperator.gestureDelimiter = GestureOperator.configs["gestureDelimiter"]
-            GestureOperator.previousServoAngles = [0] * GestureOperator.numObjects
-            # Currently, only load the configs when the "Gesture Operator" 
-            # is first called
+            GestureOperator.objectNames = configs["objectNames"]
+            GestureOperator.objectAxes = configs["objectAxes"]
+            GestureOperator.objectOffsets = configs["objectOffsets"]
+            GestureOperator.objectMultipliers = configs["objectMultipliers"]
+            GestureOperator.numObjects = configs["numObjects"]
+            GestureOperator.previousServoAngles = [0] * configs["numObjects"]
+            GestureOperator.numGestures = configs["numGestures"]
+            GestureOperator.gestureFrames = configs["gestureFrames"]
+            GestureOperator.csvOutputName = configs["csvOutputName"]
+            GestureOperator.shouldOutputCSV = configs["shouldOutputCSV"]
+            GestureOperator.gestureDelimiter = configs["gestureDelimiter"]
+            # Currently, only load the configs when the "Gesture
+            # Operator" is first called
             GestureOperator.loadConfigs = False
 
             # do this only the first time the operator is turned on
@@ -228,26 +223,26 @@ class GestureOperator(bpy.types.Operator):
                 for i in range(GestureOperator.numObjects - 1):
                     servo_angles.append(0)
 
-
-        # If we are not currently handling scene changes, set function "gesture_handler"
-        # to be run every scene change
-        if GestureOperator.isHandling == False: 
-            # NOTE: This takes a moment to actually open, so we want to wait until
-            #   we know it's open to add our handler to the scene update. Need to
-            #   find a better way than hardcoding a sleep value, but it works for now 
+        # If we are not currently handling scene changes, set function
+        # "gesture_handler" to be run every scene change
+        if not GestureOperator.isHandling:
+            # NOTE: This takes a moment to actually open, so we want
+            #   to wait until we know it's open to add our handler to
+            #   the scene update. Need to find a better way than
+            #   hardcoding a sleep value, but it works for now
             print('[INFO] Starting servo socket handler')
-            servo_command_handler = RobotSocketHandler(GestureOperator.numObjects,
-                                                       (GestureOperator.ip,
-                                                        GestureOperator.port),
-                                                       servo_angles)
-            servo_command_handler.setDaemon(True)
-            servo_command_handler.start()
+            servo_commander = RobotSocketHandler(GestureOperator.numObjects,
+                                                 (GestureOperator.ip,
+                                                  GestureOperator.port),
+                                                 servo_angles)
+            servo_commander.setDaemon(True)
+            servo_commander.start()
 
             # time.sleep(1)
             bpy.app.handlers.scene_update_pre.append(gesture_handler)
             GestureOperator.isHandling = True
-        # If we were handling scene changes, remove our handler from the handler list
-        # by reverse enumerating and popping it off
+        # If we were handling scene changes, remove our handler from
+        # the handler list by reverse enumerating and popping it off
         else:
             stop_operator()
         # Blender Python internals, must return {'FINISHED'}
@@ -255,25 +250,25 @@ class GestureOperator(bpy.types.Operator):
 
 
 def find_current_gesture(currentFrame):
-    
+
     # Reset currentGesture to -1, will remain so if currentFrame is not within
     # a gesture
     # currentGesture = -1
 
-    # Check to see if the currentFrame is within any of the gestures' windows,
-    # and set the currentGesture if so
+    # Check to see if the currentFrame is within any of the gestures'
+    # windows, and set the currentGesture if so
     for i in range(GestureOperator.numGestures):
-        # Note, gestureFrames[i][0] is the startingFrame of gesture i and
-        # gestureFrames[i][1] is the endingFrame of gesture i
-        if currentFrame >= GestureOperator.gestureFrames[i][0] and currentFrame <= GestureOperator.gestureFrames[i][1]:
+        # Note, gestureFrames[i][0] is the startingFrame of gesture i
+        # and gestureFrames[i][1] is the endingFrame of gesture i
+        if (currentFrame >= GestureOperator.gestureFrames[i][0]
+           and currentFrame <= GestureOperator.gestureFrames[i][1]):
             GestureOperator.currentGesture = i
             break
 
 
-# stop_operator()
-#
-# Stops the function of the addon by removing the scene handler we added to 
-# capture and send object positions, and TODO by closing the socket. 
+# Stops the function of the addon by removing the scene handler we
+# added to capture and send object positions, and TODO by closing the
+# socket.
 def stop_operator():
     # this prints out the full animation csv
     # print(GestureOperator.csvOutput)
@@ -287,21 +282,18 @@ def stop_operator():
 
     # Tell the addon to reload the configs when it next executes
     GestureOperator.loadConfigs = True
-    
+
     # Write out the CSV animation output to a file
-    if GestureOperator.shouldOutputCSV == True:
-        # TODO: Write out animation output for each individual gesture into the same
-        # file with delimiters (?). DONE
-        # TODO: Access the gesture data in csvOutput based on the bounds in the YAML. DONE
-        # TODO: Translate all gesture data to starting at 0 while outputting. DONE
-        outputFilePath = os.path.join(os.path.dirname(bpy.data.filepath), "animationOutput.csv")
+    if GestureOperator.shouldOutputCSV:
+        outputFilePath = os.path.join(os.path.dirname(bpy.data.filepath),
+                                      "animationOutput.csv")
         outputFile = open(outputFilePath, "w")
 
         for gesture in range(GestureOperator.numGestures):
             # Get scene information for the current gesture
             gestureStart = GestureOperator.gestureFrames[gesture][0]
             gestureEnd = GestureOperator.gestureFrames[gesture][1]
-            gestureLength = int(gestureEnd) - int(gestureStart)
+
             # Translate each gesture so it starts at 0
             offsetIndex = 0
 
@@ -330,25 +322,21 @@ def stop_operator():
         outputFile.close()
         print("File Closed")
 
-        
-
     # Reset the CSV dictionary
     GestureOperator.csvOutput = {}
 
 
-# register()
-#
-# Registers the GestureOperator class with Blender. Required function. 
-def register():  
-    bpy.utils.register_class(GestureOperator) 
+# Registers the GestureOperator class with Blender. Required function.
+def register():
+    bpy.utils.register_class(GestureOperator)
 
-# unregister()
-#
+
 # Unregisters the GestureOperator class with Blender.
-def unregister():  
-    bpy.utils.unregister_class(GestureOperator) 
+def unregister():
+    bpy.utils.unregister_class(GestureOperator)
 
 
-# For testing purposes, so the script will register the class when called directly
-if __name__ == "__main__":  
-    register()  
+# For testing purposes, so the script will register the class when
+# called directly
+if __name__ == "__main__":
+    register()
