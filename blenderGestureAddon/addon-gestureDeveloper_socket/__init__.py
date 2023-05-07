@@ -280,7 +280,7 @@ def stop_operator():
     # Write out the CSV animation output to a file
     if GestureOperator.shouldOutputCSV:
         outputFilePath = os.path.join(os.path.dirname(bpy.data.filepath),
-                                      "animationOutput.csv")
+                                      GestureOperator.csvOutputName)
         outputFile = open(outputFilePath, "w")
 
         for gesture in range(GestureOperator.numGestures):
@@ -320,13 +320,19 @@ def stop_operator():
     GestureOperator.csvOutput = {}
 
 
-# Registers the GestureOperator class with Blender. Required function.
 def register():
+    """Registers the GestureOperator class with Blender.
+
+    This is a required function for a Blender Add-On
+
+    """
     bpy.utils.register_class(GestureOperator)
 
 
-# Unregisters the GestureOperator class with Blender.
 def unregister():
+    """Unregisters the GestureOperator class with Blender.
+
+    """
     bpy.utils.unregister_class(GestureOperator)
 
 
